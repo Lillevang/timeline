@@ -4,6 +4,7 @@ A powerful and flexible timeline visualization tool that uses a custom Domain Sp
 
 ![image](https://github.com/user-attachments/assets/c5fa5ed5-4ed9-4192-bfa8-9c5bb9e830b5)
 
+A live version of the tool can be found on my website https://timeline.lillevang.dev/
 
 ## Features
 
