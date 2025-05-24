@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Deployment
+Dockerfile
+nginx.conf
+k8s/*
