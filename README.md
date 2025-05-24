@@ -2,6 +2,9 @@
 
 A powerful and flexible timeline visualization tool that uses a custom Domain Specific Language (DSL) to create beautiful, interactive timelines. Perfect for project planning, roadmaps, and event tracking.
 
+![image](https://github.com/user-attachments/assets/c5fa5ed5-4ed9-4192-bfa8-9c5bb9e830b5)
+
+
 ## Features
 
 - **Custom DSL**: Define timelines using a simple, intuitive syntax
@@ -28,7 +31,7 @@ A powerful and flexible timeline visualization tool that uses a custom Domain Sp
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/timeline.git
+git clone https://github.com/Lillevang/timeline.git
 
 # Navigate to the project directory
 cd timeline
@@ -59,14 +62,14 @@ track "Track Name"
 ```
 track "Track Name"
   row "Row Name"
-  row "Hidden Row" hideName
+  row "Hidden Row" hidden
 ```
 
 #### Bars
 ```
 bar "Bar Name" from YYYY-MM-DD to YYYY-MM-DD color blue
-bar "Left Label" from YYYY-MM-DD to YYYY-MM-DD color green textAnchor left
-bar "Right Label" from YYYY-MM-DD to YYYY-MM-DD color red textAnchor right
+bar "Left Label" from YYYY-MM-DD to YYYY-MM-DD color green text left
+bar "Right Label" from YYYY-MM-DD to YYYY-MM-DD color red text right
 ```
 
 #### Points
