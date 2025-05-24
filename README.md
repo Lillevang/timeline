@@ -22,10 +22,11 @@ A powerful and flexible timeline visualization tool that uses a custom Domain Sp
 - **Export Options**:
   - Download as SVG for vector graphics
   - Download as PNG for raster images
-- **Responsive Design**: Adapts to different screen sizes
 - **Today Indicator**: Shows current date on the timeline
 - **Week Numbers**: Optional display of ISO week numbers
 - **Date Display**: Toggle between different date formats
+
+**The design is not yet responsive and works best on a desktop/laptop monitor**
 
 ## Installation
 
