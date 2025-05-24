@@ -1,0 +1,316 @@
+.timeline-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.timeline-header {
+  padding: 0.75rem 1rem;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timeline-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.timeline-export-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.timeline-download-btn {
+  padding: 6px 12px;
+  background-color: #339af0;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.timeline-download-btn:hover {
+  background-color: #228be6;
+}
+
+.timeline-download-btn:active {
+  background-color: #1c7ed6;
+}
+
+.timeline-content {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+  position: relative;
+}
+
+.timeline-svg {
+  min-width: 100%;
+}
+
+.empty-timeline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Timeline elements */
+.timeline-track-bg {
+  fill: #ffffff;
+  stroke: #e9ecef;
+  stroke-width: 1;
+}
+
+.timeline-track-label {
+  font-weight: 600;
+  fill: #495057;
+  dominant-baseline: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+.timeline-track-label tspan {
+  dominant-baseline: text-before-edge;
+}
+
+.timeline-row-label {
+  font-size: 0.75rem;
+  fill: #495057;
+  font-weight: 500;
+  dominant-baseline: middle;
+}
+
+/* Adjust track and row label positioning */
+.timeline-track text {
+  text-anchor: end;
+}
+
+.timeline-row text {
+  text-anchor: end;
+}
+
+.timeline-grid-line {
+  stroke: #f1f3f5;
+  stroke-width: 1;
+}
+
+.timeline-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.timeline-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #495057;
+  cursor: pointer;
+}
+
+.timeline-toggle input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.timeline-week-label {
+  font-size: 0.75rem;
+  fill: #495057;
+  font-weight: 500;
+}
+
+.timeline-month-label {
+  font-size: 0.75rem;
+  fill: #495057;
+  font-weight: 500;
+}
+
+.timeline-day-label {
+  font-size: 0.75rem;
+  fill: #6c757d;
+}
+
+.timeline-bar-rect {
+  stroke-width: 1;
+  opacity: 0.9;
+}
+
+.timeline-bar-label {
+  font-size: 0.75rem;
+  fill: #212529;
+  pointer-events: none;
+  font-weight: 500;
+}
+
+.timeline-point-label {
+  font-size: 0.75rem;
+  fill: #212529;
+  pointer-events: none;
+  font-weight: 500;
+}
+
+.timeline-milestone-line {
+  stroke-width: 2;
+  stroke-dasharray: 4 2;
+  opacity: 0.7;
+}
+
+.timeline-milestone-marker {
+  stroke-width: 2;
+  opacity: 0.9;
+}
+
+.timeline-milestone-label {
+  font-size: 0.875rem;
+  fill: #212529;
+  font-weight: 600;
+}
+
+.timeline-milestone-bg {
+  fill: white;
+  stroke: none;
+}
+
+/* Today indicator */
+.timeline-today-line {
+  stroke: #fa5252;
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+  opacity: 0.7;
+}
+
+.timeline-today-stipple {
+  stroke: #fa5252;
+  stroke-width: 1;
+  stroke-dasharray: 1 3;
+  opacity: 0.3;
+}
+
+.timeline-today-bg {
+  fill: #fa5252;
+  rx: 4;
+  ry: 4;
+}
+
+.timeline-today-label {
+  fill: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Colors for timeline elements */
+.color-blue {
+  fill: #339af0;
+  stroke: #228be6;
+}
+
+.color-lightblue {
+  fill: #74c0fc;
+  stroke: #4dabf7;
+}
+
+.color-green {
+  fill: #40c057;
+  stroke: #37b24d;
+}
+
+.color-lightgreen {
+  fill: #8ce99a;
+  stroke: #69db7c;
+}
+
+.color-yellow {
+  fill: #fcc419;
+  stroke: #f59f00;
+}
+
+.color-orange {
+  fill: #fd7e14;
+  stroke: #f76707;
+}
+
+.color-red {
+  fill: #fa5252;
+  stroke: #f03e3e;
+}
+
+.color-purple {
+  fill: #cc5de8;
+  stroke: #be4bdb;
+}
+
+.color-pink {
+  fill: #f06595;
+  stroke: #e64980;
+}
+
+.color-cyan {
+  fill: #15aabf;
+  stroke: #1098ad;
+}
+
+.color-teal {
+  fill: #12b886;
+  stroke: #0ca678;
+}
+
+.color-gray {
+  fill: #868e96;
+  stroke: #495057;
+}
+
+.color-brown {
+  fill: #d6336c;
+  stroke: #c2255c;
+}
+
+.color-lime {
+  fill: #82c91e;
+  stroke: #74b816;
+}
+
+.color-indigo {
+  fill: #5c7cfa;
+  stroke: #4c6ef5;
+}
+
+.color-violet {
+  fill: #845ef7;
+  stroke: #7048e8;
+}
+
+/* Animation for timeline elements */
+.timeline-bar-rect, 
+.timeline-point-shape {
+  transition: fill 0.2s ease-in-out, stroke 0.2s ease-in-out, opacity 0.2s ease-in-out;
+}
+
+.timeline-bar-rect:hover, 
+.timeline-point-shape:hover {
+  opacity: 1;
+  filter: brightness(1.1);
+}
+
+/* Point shapes spacing */
+.timeline-point {
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
+.timeline-point-shape {
+  stroke-width: 1.5;
+}

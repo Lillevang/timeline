@@ -1,0 +1,49 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #495057;
+}
+
+.help-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #6c757d;
+  background: white;
+  color: #6c757d;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.help-button:hover {
+  background: #6c757d;
+  color: white;
+}
+
+.app-content {
+  flex: 1;
+  overflow: hidden;
+}
