@@ -25,6 +25,5 @@ dist-ssr
 .env
 
 # Deployment
-Dockerfile
 nginx.conf
 k8s/*
