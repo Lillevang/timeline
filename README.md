@@ -4,6 +4,7 @@ A powerful and flexible timeline visualization tool that uses a custom Domain Sp
 
 ![image](https://github.com/user-attachments/assets/c5fa5ed5-4ed9-4192-bfa8-9c5bb9e830b5)
 
+A live version of the tool can be found on my website https://timeline.lillevang.dev/
 
 ## Features
 
@@ -22,10 +23,11 @@ A powerful and flexible timeline visualization tool that uses a custom Domain Sp
 - **Export Options**:
   - Download as SVG for vector graphics
   - Download as PNG for raster images
-- **Responsive Design**: Adapts to different screen sizes
 - **Today Indicator**: Shows current date on the timeline
 - **Week Numbers**: Optional display of ISO week numbers
 - **Date Display**: Toggle between different date formats
+
+**The design is not yet responsive and works best on a desktop/laptop monitor**
 
 ## Installation
 
@@ -135,4 +137,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the AGPL License - see the [LICENSE](LICENSE) file for details. 
