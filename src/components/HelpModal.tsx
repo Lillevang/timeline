@@ -54,6 +54,14 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
               <li>Label: <code>label "%date"</code> or <code>label "Custom Text"</code></li>
             </ul>
 
+            <h4>Recurring Points</h4>
+            <p>Create points that repeat at regular intervals:</p>
+            <pre>recurring point "Weekly Meeting" weekly from 2024-01-01 to 2024-12-31 color blue shape circle
+recurring point "Daily Standup" daily from 2024-01-01 to 2024-01-31 color red shape square
+recurring point "Monthly Review" monthly from 2024-01-01 to 2024-12-31 color green shape triangle
+recurring point "Annual Event" yearly from 2024-01-01 to 2024-12-31 color purple shape triangle-down</pre>
+            <p>Available intervals: daily, weekly, monthly, yearly</p>
+
             <h4>Milestones</h4>
             <p>Create a milestone at a specific date:</p>
             <pre>milestone "Milestone Name" at 2024-01-14 color blue</pre>

@@ -15,6 +15,7 @@ A live version of the tool can be found on my website https://timeline.lillevang
   - Bars for time periods
   - Points for specific events
   - Milestones for important dates
+  - Recurring points for regular events
 - **Rich Styling**:
   - Custom colors for all elements
   - Multiple point shapes (circle, square, triangle)
@@ -30,6 +31,16 @@ A live version of the tool can be found on my website https://timeline.lillevang
 **The design is not yet responsive and works best on a desktop/laptop monitor**
 
 ## Installation
+
+### Using Docker
+
+```bash
+docker run -p 3000:80 ghcr.io/lillevang/timeline:latest
+```
+
+Then open http://localhost:3000 in your browser.
+
+### Manual Installation
 
 ```bash
 # Clone the repository
@@ -82,6 +93,14 @@ point "Triangle Point" at YYYY-MM-DD color green shape triangle
 point "Down Triangle" at YYYY-MM-DD color purple shape triangle-down
 ```
 
+#### Recurring Points
+```
+recurring point "Weekly Meeting" weekly from YYYY-MM-DD to YYYY-MM-DD color blue shape circle
+recurring point "Monthly Review" monthly from YYYY-MM-DD to YYYY-MM-DD color red shape square
+recurring point "Daily Standup" daily from YYYY-MM-DD to YYYY-MM-DD color green shape triangle
+recurring point "Annual Event" yearly from YYYY-MM-DD to YYYY-MM-DD color purple shape triangle-down
+```
+
 #### Milestones
 ```
 milestone "Milestone Name" at YYYY-MM-DD color blue
@@ -126,6 +145,7 @@ track "Project Timeline"
   row "Development"
     bar "Sprint 1" from 2024-01-15 to 2024-01-29 color green
     point "Demo" at 2024-01-29 color purple shape triangle
+    recurring point "Team Sync" weekly from 2024-01-15 to 2024-02-15 color blue shape circle
   row "Testing"
     bar "QA" from 2024-01-29 to 2024-02-12 color yellow
     milestone "Release" at 2024-02-12 color red
