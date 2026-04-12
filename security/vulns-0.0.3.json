@@ -3,8 +3,8 @@
   "Trivy": {
     "Version": "0.69.3"
   },
-  "ReportID": "019d83d7-1aab-79c8-9e90-d7c894092dd5",
-  "CreatedAt": "2026-04-13T00:36:45.611643163+02:00",
+  "ReportID": "019d83df-ecf4-7841-acd1-29cb469f20e8",
+  "CreatedAt": "2026-04-13T00:46:23.732542965+02:00",
   "ArtifactID": "sha256:fe43098a8c782b6337319871bd52a2002e0862b42fad65903c38419d2d29ef0b",
   "ArtifactName": "ghcr.io/lillevang/timeline:0.0.3",
   "ArtifactType": "container_image",

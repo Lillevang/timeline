@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:d3a5ab29-ea6c-4ec7-9744-2e21f0655caf",
+  "serialNumber": "urn:uuid:0b4e648e-f7f6-467b-a5a2-b7a47a0c4bdd",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-04-12T22:36:44+00:00",
+    "timestamp": "2026-04-12T22:46:22+00:00",
     "tools": {
       "components": [
         {
@@ -98,7 +98,7 @@
   },
   "components": [
     {
-      "bom-ref": "fe89339d-4379-4307-9611-760fcb83f4a6",
+      "bom-ref": "f73f4253-a06b-4f30-b421-40043f105179",
       "type": "operating-system",
       "name": "alpine",
       "version": "3.21.5",
@@ -1131,7 +1131,7 @@
   ],
   "dependencies": [
     {
-      "ref": "fe89339d-4379-4307-9611-760fcb83f4a6",
+      "ref": "f73f4253-a06b-4f30-b421-40043f105179",
       "dependsOn": [
         "pkg:apk/alpine/alpine-baselayout@3.6.8-r1?arch=x86_64&distro=3.21.5",
         "pkg:apk/alpine/alpine-release@3.21.5-r0?arch=x86_64&distro=3.21.5",
@@ -1271,7 +1271,7 @@
     {
       "ref": "pkg:oci/timeline@sha256%3Acb2d102b87477b71212ce419e7fe9878c77a6fad7fb285fe77697f3d3e210b17?arch=amd64&repository_url=ghcr.io%2Flillevang%2Ftimeline",
       "dependsOn": [
-        "fe89339d-4379-4307-9611-760fcb83f4a6"
+        "f73f4253-a06b-4f30-b421-40043f105179"
       ]
     }
   ],
