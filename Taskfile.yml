@@ -41,10 +41,10 @@ tasks:
       - |
         echo "🚀 Starting container {{.IMAGE}}:{{.TAG}}"
         NETWORK_OPT=$([ "{{.RUNTIME}}" = "podman" ] && echo "--network=slirp4netns" || echo "")
-        CID=$({{.RUNTIME}} run -d $NETWORK_OPT -p 8080:80 {{.IMAGE}}:{{.TAG}})
+        CID=$({{.RUNTIME}} run -d $NETWORK_OPT -p 8081:80 {{.IMAGE}}:{{.TAG}})
         echo "⌛ Waiting for container to be ready"
         sleep 3
-        if [ "$(curl --max-time 5 -fs http://localhost:8080/healthz)" = "ok" ]; then
+        if [ "$(curl --max-time 5 -fs http://localhost:8081/healthz)" = "ok" ]; then
           echo "✅ Health check passed"
         else
           echo "❌ Health check failed"
