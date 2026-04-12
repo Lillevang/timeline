@@ -1,4 +1,4 @@
-import { TimelineData, Track, Row, TimelineItem, BarItem, PointItem, Milestone } from '../types';
+import { TimelineData, Track, Row, TimelineItem, BarItem, PointItem, Milestone, TimelineWindow } from '../types';
 
 function generateRecurringDates(startDate: string, endDate: string, frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'): string[] {
   const dates: string[] = [];
@@ -40,11 +40,18 @@ export function parseTimelineDSL(dsl: string): TimelineData {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
-    if (!line) continue; // Skip empty lines
-    
+
+    if (!line || line.startsWith('#')) continue;
+
+    // Handle window
+    if (line.startsWith('window')) {
+      const windowMatch = line.match(/window\s+from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/);
+      if (windowMatch) {
+        timelineData.window = { start: windowMatch[1], end: windowMatch[2] };
+      }
+    }
     // Handle track
-    if (line.startsWith('track')) {
+    else if (line.startsWith('track')) {
       const nameMatch = line.match(/track\s+"([^"]+)"/);
       if (nameMatch) {
         currentTrack = {

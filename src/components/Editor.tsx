@@ -22,6 +22,7 @@ const TimelineEditor: React.FC<EditorProps> = ({ value, onChange }) => {
     monaco.languages.setMonarchTokensProvider('timeline', {
       tokenizer: {
         root: [
+          [/^window\s+/, 'keyword'],
           [/^track\s+/, 'keyword'],
           [/^row\s+/, 'keyword'],
           [/^bar\s+/, 'keyword'],
@@ -51,6 +52,14 @@ const TimelineEditor: React.FC<EditorProps> = ({ value, onChange }) => {
         };
 
         const suggestions = [
+          {
+            label: 'window',
+            kind: monaco.languages.CompletionItemKind.Keyword,
+            insertText: 'window from ${1:YYYY-MM-DD} to ${2:YYYY-MM-DD}',
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            documentation: 'Set the visible date range for the timeline',
+            range
+          },
           {
             label: 'track',
             kind: monaco.languages.CompletionItemKind.Keyword,

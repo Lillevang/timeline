@@ -37,7 +37,13 @@ export interface Milestone {
   color: string;
 }
 
+export interface TimelineWindow {
+  start: string;
+  end: string;
+}
+
 export interface TimelineData {
   tracks: Track[];
   milestones: Milestone[];
+  window?: TimelineWindow;
 }

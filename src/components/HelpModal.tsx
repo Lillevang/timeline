@@ -13,93 +13,116 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
     <div className="help-modal-overlay" onClick={onClose}>
       <div className="help-modal" onClick={e => e.stopPropagation()}>
         <div className="help-modal-header">
-          <h2>Timeline DSL Guide</h2>
+          <h2>Timeline DSL Reference</h2>
           <button className="help-modal-close" onClick={onClose}>×</button>
         </div>
         <div className="help-modal-content">
+
           <section>
-            <h3>Basic Structure</h3>
-            <p>The Timeline DSL (Domain Specific Language) allows you to create timeline visualizations using a simple text-based format. Each line defines a track, row, or timeline element.</p>
+            <h3>Basic structure</h3>
+            <pre>{`# Comments start with #
+window from 2025-01-01 to 2025-12-31
+
+track "Track Name"
+  row "Row Name"
+    bar "Bar Name" from 2025-01-01 to 2025-03-31 color blue
+    point "Event" at 2025-02-01 shape circle color red
+  row "Hidden Row" hidden
+    bar "Internal" from 2025-01-01 to 2025-06-30 color gray
+
+milestone "Launch" at 2025-06-01 color green`}</pre>
+            <p>
+              <code>window</code> pins the x-axis to a fixed date range instead of auto-fitting to your data.
+              Comments (<code>#</code>) are ignored by the parser.
+            </p>
           </section>
 
           <section>
             <h3>Elements</h3>
-            
-            <h4>Tracks</h4>
-            <p>Define a track with a name</p>
-            <pre>track "Track Name"</pre>
-
-            <h4>Rows</h4>
-            <p>Define a row within a track:</p>
-            <pre>row "Row Name"</pre>
-            <p>You can hide the row name by adding <code>hidden</code>:</p>
-            <pre>row "Row Name" hidden</pre>
 
             <h4>Bars</h4>
-            <p>Create a bar with start and end dates:</p>
-            <pre>bar "Bar Name" from 2024-01-01 to 2024-01-14 color blue</pre>
-            <p>Additional options:</p>
+            <pre>{`bar "Name" from YYYY-MM-DD to YYYY-MM-DD color COLOR
+bar "With label" from 2025-01-01 to 2025-03-31 color blue label "%duration"
+bar "Left text" from 2025-01-01 to 2025-03-31 color green text left`}</pre>
+            <p>Options (in order after the date range):</p>
             <ul>
-              <li>Text position: <code>text left|right|top|bottom|center</code></li>
-              <li>Label: <code>label "%duration"</code> or <code>label "Custom Text"</code></li>
+              <li><code>color COLOR</code> — required</li>
+              <li><code>text left|right|top|bottom|center</code> — label position (default: center)</li>
+              <li><code>label "..."</code> — secondary label; supports <code>%date</code> and <code>%duration</code> tokens</li>
             </ul>
 
             <h4>Points</h4>
-            <p>Create a point at a specific date:</p>
-            <pre>point "Point Name" at 2024-01-14 color red shape circle</pre>
-            <p>Available shapes: circle, square, triangle, triangle-down</p>
-            <p>Additional options:</p>
+            <pre>{`point "Name" at YYYY-MM-DD color COLOR
+point "Name" at YYYY-MM-DD shape circle color red
+point "Name" at YYYY-MM-DD shape triangle-down color blue text right label "%date"`}</pre>
+            <p>
+              <strong>Note:</strong> <code>shape</code> must come before <code>color</code>. Available shapes:{' '}
+              <code>triangle</code> (default), <code>triangle-down</code>, <code>circle</code>, <code>square</code>.
+            </p>
+            <p>Options (in order after the date):</p>
             <ul>
-              <li>Text position: <code>text left|right|top|bottom|center</code></li>
-              <li>Label: <code>label "%date"</code> or <code>label "Custom Text"</code></li>
+              <li><code>shape SHAPE</code> — optional, defaults to <code>triangle</code></li>
+              <li><code>color COLOR</code> — required</li>
+              <li><code>text left|right|top|bottom|center</code> — label position (default: above)</li>
+              <li><code>label "..."</code> — secondary label</li>
             </ul>
 
-            <h4>Recurring Points</h4>
-            <p>Create points that repeat at regular intervals:</p>
-            <pre>recurring point "Weekly Meeting" weekly from 2024-01-01 to 2024-12-31 color blue shape circle
-recurring point "Daily Standup" daily from 2024-01-01 to 2024-01-31 color red shape square
-recurring point "Monthly Review" monthly from 2024-01-01 to 2024-12-31 color green shape triangle
-recurring point "Annual Event" yearly from 2024-01-01 to 2024-12-31 color purple shape triangle-down</pre>
-            <p>Available intervals: daily, weekly, monthly, yearly</p>
+            <h4>Recurring points</h4>
+            <pre>{`recurring point "Name" weekly from YYYY-MM-DD to YYYY-MM-DD color blue
+recurring point "Name" monthly from YYYY-MM-DD to YYYY-MM-DD shape square color red`}</pre>
+            <p>
+              <strong>Note:</strong> <code>shape</code> must come before <code>color</code>.
+              Available frequencies: <code>daily</code>, <code>weekly</code>, <code>monthly</code>, <code>yearly</code>.
+            </p>
 
             <h4>Milestones</h4>
-            <p>Create a milestone at a specific date:</p>
-            <pre>milestone "Milestone Name" at 2024-01-14 color blue</pre>
+            <pre>{`milestone "Name" at YYYY-MM-DD color blue`}</pre>
+            <p>Milestones render as a vertical dashed line across all tracks. <code>color</code> is optional and defaults to blue.</p>
           </section>
 
           <section>
-            <h3>Special Features</h3>
-            
-            <h4>Labels</h4>
-            <p>Special tokens for labels:</p>
+            <h3>Label tokens</h3>
             <ul>
-              <li><code>%date</code>: Shows the date in "dd MMM" format (e.g., "14 Apr")</li>
-              <li><code>%duration</code>: Shows the duration in days for bars (e.g., "14d")</li>
-            </ul>
-
-            <h4>Text Positioning</h4>
-            <p>Control where text appears relative to the element:</p>
-            <ul>
-              <li><code>text left</code>: Text appears to the left</li>
-              <li><code>text right</code>: Text appears to the right</li>
-              <li><code>text top</code>: Text appears above</li>
-              <li><code>text bottom</code>: Text appears below</li>
-              <li><code>text center</code>: Text appears centered</li>
+              <li><code>%date</code> — the element's date in short format, e.g. <code>14 Apr</code> (bars show their start date)</li>
+              <li><code>%duration</code> — duration in days for bars, e.g. <code>90d</code></li>
             </ul>
           </section>
 
           <section>
-            <h3>Example</h3>
-            <pre>{`track "Project Timeline" color blue
-row "Development"
-bar "Sprint 1" from 2024-01-01 to 2024-01-14 color blue label "%duration"
-point "Release" at 2024-01-14 shape triangle-down color red label "%date"
-milestone "Launch" at 2024-01-14 color green`}</pre>
+            <h3>Available colors</h3>
+            <p>
+              <code>blue</code> · <code>lightblue</code> · <code>green</code> · <code>lightgreen</code> ·{' '}
+              <code>yellow</code> · <code>orange</code> · <code>red</code> · <code>purple</code> ·{' '}
+              <code>pink</code> · <code>cyan</code> · <code>teal</code> · <code>indigo</code> ·{' '}
+              <code>violet</code> · <code>lime</code> · <code>gray</code>
+            </p>
           </section>
+
+          <section>
+            <h3>Full example</h3>
+            <pre>{`# Q2 roadmap
+window from 2025-04-01 to 2025-06-30
+
+track "Engineering"
+  row "Backend"
+    bar "API v2" from 2025-04-01 to 2025-05-15 color blue label "%duration"
+    point "Deploy" at 2025-05-15 shape triangle-down color red
+  row "Frontend"
+    bar "Dashboard" from 2025-04-15 to 2025-06-01 color indigo
+    recurring point "Sync" weekly from 2025-04-15 to 2025-06-01 shape circle color gray
+
+track "Design"
+  row "UX"
+    bar "Research" from 2025-04-01 to 2025-04-30 color teal label "%date"
+
+milestone "Beta" at 2025-05-15 color orange
+milestone "Launch" at 2025-06-20 color green`}</pre>
+          </section>
+
         </div>
       </div>
     </div>
   );
 };
 
-export default HelpModal; 
+export default HelpModal;

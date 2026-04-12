@@ -3,81 +3,185 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: #fff;
 }
 
+/* ── Toolbar ── */
 .timeline-header {
-  padding: 0.75rem 1rem;
-  background-color: #f8f9fa;
+  padding: 0 1rem;
+  height: 44px;
+  background-color: #fff;
   border-bottom: 1px solid #e9ecef;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
+  gap: 1rem;
 }
 
 .timeline-header h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #adb5bd;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.timeline-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Pill toggles (Weeks / Dates) */
+.timeline-toggles {
+  display: flex;
+  gap: 4px;
+}
+
+.timeline-pill-btn {
+  padding: 3px 10px;
+  font-size: 0.75rem;
   font-weight: 500;
+  border-radius: 999px;
+  border: 1px solid #dee2e6;
+  background: transparent;
+  color: #868e96;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.timeline-pill-btn:hover {
+  border-color: #adb5bd;
   color: #495057;
 }
 
+.timeline-pill-btn.active {
+  background: #e7f5ff;
+  border-color: #74c0fc;
+  color: #1971c2;
+}
+
+/* Aspect ratio segmented control */
+.timeline-ratio-group {
+  display: flex;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.timeline-ratio-btn {
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  border-right: 1px solid #dee2e6;
+  color: #868e96;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.timeline-ratio-btn:last-child {
+  border-right: none;
+}
+
+.timeline-ratio-btn:hover {
+  background: #f8f9fa;
+  color: #495057;
+}
+
+.timeline-ratio-btn.active {
+  background: #1a1b1e;
+  color: #fff;
+}
+
+/* Export buttons */
 .timeline-export-buttons {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .timeline-download-btn {
-  padding: 6px 12px;
-  background-color: #339af0;
-  color: white;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 5px;
   border: none;
-  border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
+  transition: all 0.15s;
+  white-space: nowrap;
 }
 
-.timeline-download-btn:hover {
-  background-color: #228be6;
+.timeline-download-btn.secondary {
+  background: #f1f3f5;
+  color: #495057;
 }
 
-.timeline-download-btn:active {
-  background-color: #1c7ed6;
+.timeline-download-btn.secondary:hover {
+  background: #e9ecef;
+  color: #212529;
 }
 
+.timeline-download-btn.primary {
+  background: #339af0;
+  color: #fff;
+}
+
+.timeline-download-btn.primary:hover {
+  background: #228be6;
+}
+
+.timeline-download-btn.success {
+  background: #40c057;
+  color: #fff;
+}
+
+/* ── Canvas ── */
 .timeline-content {
   flex: 1;
   overflow: auto;
   padding: 1rem;
+  background: #f8f9fa;
   position: relative;
 }
 
 .timeline-svg {
   min-width: 100%;
+  display: block;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  background: #fff;
 }
 
 .empty-timeline {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6c757d;
-  font-style: italic;
+  color: #adb5bd;
+  font-size: 0.875rem;
 }
 
-/* Timeline elements */
+/* ── SVG element styles ── */
 .timeline-track-bg {
-  fill: #ffffff;
-  stroke: #e9ecef;
+  fill: #f8f9fa;
+  stroke: #f1f3f5;
   stroke-width: 1;
 }
 
+.timeline-track-bg:nth-child(even) {
+  fill: #ffffff;
+}
+
 .timeline-track-label {
-  font-weight: 600;
-  fill: #495057;
+  font-weight: 700;
+  fill: #343a40;
   dominant-baseline: middle;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   line-height: 1.2;
 }
 
@@ -86,13 +190,12 @@
 }
 
 .timeline-row-label {
-  font-size: 0.75rem;
-  fill: #495057;
+  font-size: 0.7rem;
+  fill: #868e96;
   font-weight: 500;
   dominant-baseline: middle;
 }
 
-/* Adjust track and row label positioning */
 .timeline-track text {
   text-anchor: end;
 }
@@ -106,76 +209,62 @@
   stroke-width: 1;
 }
 
-.timeline-controls {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.timeline-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: #495057;
-  cursor: pointer;
-}
-
-.timeline-toggle input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
-  cursor: pointer;
-}
-
 .timeline-week-label {
-  font-size: 0.75rem;
-  fill: #495057;
+  font-size: 0.65rem;
+  fill: #868e96;
   font-weight: 500;
 }
 
 .timeline-month-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   fill: #495057;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .timeline-day-label {
-  font-size: 0.75rem;
-  fill: #6c757d;
+  font-size: 0.65rem;
+  fill: #adb5bd;
 }
 
+/* Bars */
 .timeline-bar-rect {
-  stroke-width: 1;
-  opacity: 0.9;
+  stroke-width: 0;
+  opacity: 1;
 }
 
 .timeline-bar-label {
-  font-size: 0.75rem;
-  fill: #212529;
+  font-size: 0.7rem;
+  fill: #fff;
   pointer-events: none;
-  font-weight: 500;
+  font-weight: 600;
 }
 
+/* Points */
 .timeline-point-label {
-  font-size: 0.75rem;
-  fill: #212529;
+  font-size: 0.7rem;
+  fill: #343a40;
   pointer-events: none;
   font-weight: 500;
 }
 
+.timeline-point-shape {
+  stroke-width: 0;
+}
+
+/* Milestones */
 .timeline-milestone-line {
-  stroke-width: 2;
-  stroke-dasharray: 4 2;
-  opacity: 0.7;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  opacity: 0.55;
 }
 
 .timeline-milestone-marker {
-  stroke-width: 2;
-  opacity: 0.9;
+  stroke-width: 0;
+  opacity: 1;
 }
 
 .timeline-milestone-label {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   fill: #212529;
   font-weight: 600;
 }
@@ -188,129 +277,52 @@
 /* Today indicator */
 .timeline-today-line {
   stroke: #fa5252;
-  stroke-width: 2;
+  stroke-width: 1.5;
   stroke-dasharray: 4 4;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .timeline-today-stipple {
   stroke: #fa5252;
   stroke-width: 1;
   stroke-dasharray: 1 3;
-  opacity: 0.3;
+  opacity: 0.2;
 }
 
 .timeline-today-bg {
   fill: #fa5252;
-  rx: 4;
-  ry: 4;
 }
 
 .timeline-today-label {
   fill: white;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
-/* Colors for timeline elements */
-.color-blue {
-  fill: #339af0;
-  stroke: #228be6;
+/* ── Colors ── */
+.color-blue       { fill: #339af0; stroke: #339af0; }
+.color-lightblue  { fill: #74c0fc; stroke: #74c0fc; }
+.color-green      { fill: #40c057; stroke: #40c057; }
+.color-lightgreen { fill: #8ce99a; stroke: #8ce99a; }
+.color-yellow     { fill: #fcc419; stroke: #fcc419; }
+.color-orange     { fill: #fd7e14; stroke: #fd7e14; }
+.color-red        { fill: #fa5252; stroke: #fa5252; }
+.color-purple     { fill: #cc5de8; stroke: #cc5de8; }
+.color-pink       { fill: #f06595; stroke: #f06595; }
+.color-cyan       { fill: #15aabf; stroke: #15aabf; }
+.color-teal       { fill: #12b886; stroke: #12b886; }
+.color-gray       { fill: #868e96; stroke: #868e96; }
+.color-indigo     { fill: #5c7cfa; stroke: #5c7cfa; }
+.color-violet     { fill: #845ef7; stroke: #845ef7; }
+.color-lime       { fill: #82c91e; stroke: #82c91e; }
+
+/* Hover interactions */
+.timeline-bar-rect:hover {
+  filter: brightness(1.08);
+  cursor: default;
 }
 
-.color-lightblue {
-  fill: #74c0fc;
-  stroke: #4dabf7;
-}
-
-.color-green {
-  fill: #40c057;
-  stroke: #37b24d;
-}
-
-.color-lightgreen {
-  fill: #8ce99a;
-  stroke: #69db7c;
-}
-
-.color-yellow {
-  fill: #fcc419;
-  stroke: #f59f00;
-}
-
-.color-orange {
-  fill: #fd7e14;
-  stroke: #f76707;
-}
-
-.color-red {
-  fill: #fa5252;
-  stroke: #f03e3e;
-}
-
-.color-purple {
-  fill: #cc5de8;
-  stroke: #be4bdb;
-}
-
-.color-pink {
-  fill: #f06595;
-  stroke: #e64980;
-}
-
-.color-cyan {
-  fill: #15aabf;
-  stroke: #1098ad;
-}
-
-.color-teal {
-  fill: #12b886;
-  stroke: #0ca678;
-}
-
-.color-gray {
-  fill: #868e96;
-  stroke: #495057;
-}
-
-.color-brown {
-  fill: #d6336c;
-  stroke: #c2255c;
-}
-
-.color-lime {
-  fill: #82c91e;
-  stroke: #74b816;
-}
-
-.color-indigo {
-  fill: #5c7cfa;
-  stroke: #4c6ef5;
-}
-
-.color-violet {
-  fill: #845ef7;
-  stroke: #7048e8;
-}
-
-/* Animation for timeline elements */
-.timeline-bar-rect, 
-.timeline-point-shape {
-  transition: fill 0.2s ease-in-out, stroke 0.2s ease-in-out, opacity 0.2s ease-in-out;
-}
-
-.timeline-bar-rect:hover, 
 .timeline-point-shape:hover {
-  opacity: 1;
   filter: brightness(1.1);
-}
-
-/* Point shapes spacing */
-.timeline-point {
-  margin-left: 4px;
-  margin-right: 4px;
-}
-
-.timeline-point-shape {
-  stroke-width: 1.5;
+  cursor: default;
 }

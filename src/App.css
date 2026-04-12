@@ -1,46 +1,64 @@
+:root {
+  --surface: #ffffff;
+  --surface-subtle: #f8f9fa;
+  --border: #e9ecef;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --text-muted: #adb5bd;
+  --accent: #339af0;
+  --accent-dark: #1c7ed6;
+  --header-bg: #1a1b1e;
+  --header-text: #c9d1d9;
+}
+
 .app {
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-  background-color: #f8f9fa;
-  color: #333;
+  background-color: var(--surface-subtle);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  padding: 0 1.25rem;
+  height: 48px;
+  background-color: var(--header-bg);
+  border-bottom: 1px solid #2d2e31;
+  flex-shrink: 0;
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 1.5rem;
-  color: #495057;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--header-text);
+  letter-spacing: 0.02em;
 }
 
 .help-button {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  border: 2px solid #6c757d;
-  background: white;
-  color: #6c757d;
-  font-size: 1.25rem;
-  font-weight: bold;
+  border: 1px solid #444;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .help-button:hover {
-  background: #6c757d;
-  color: white;
+  border-color: #888;
+  color: var(--header-text);
 }
 
 .app-content {
