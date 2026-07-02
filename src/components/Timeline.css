@@ -300,21 +300,6 @@
 }
 
 /* ── Colors ── */
-.color-blue       { fill: #339af0; stroke: #339af0; }
-.color-lightblue  { fill: #74c0fc; stroke: #74c0fc; }
-.color-green      { fill: #40c057; stroke: #40c057; }
-.color-lightgreen { fill: #8ce99a; stroke: #8ce99a; }
-.color-yellow     { fill: #fcc419; stroke: #fcc419; }
-.color-orange     { fill: #fd7e14; stroke: #fd7e14; }
-.color-red        { fill: #fa5252; stroke: #fa5252; }
-.color-purple     { fill: #cc5de8; stroke: #cc5de8; }
-.color-pink       { fill: #f06595; stroke: #f06595; }
-.color-cyan       { fill: #15aabf; stroke: #15aabf; }
-.color-teal       { fill: #12b886; stroke: #12b886; }
-.color-gray       { fill: #868e96; stroke: #868e96; }
-.color-indigo     { fill: #5c7cfa; stroke: #5c7cfa; }
-.color-violet     { fill: #845ef7; stroke: #845ef7; }
-.color-lime       { fill: #82c91e; stroke: #82c91e; }
 
 /* Hover interactions */
 .timeline-bar-rect:hover {

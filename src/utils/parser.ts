@@ -1,4 +1,44 @@
-import { TimelineData, Track, Row, TimelineItem, BarItem, PointItem, Milestone, TimelineWindow } from '../types';
+import { TimelineData, Track, Row, BarItem, PointItem, Milestone } from '../types/index';
+import { PALETTE, isHexColor } from '../theme';
+
+export interface ParseError {
+  line: number; // 1-indexed
+  message: string;
+}
+
+export interface ParseResult {
+  data: TimelineData;
+  errors: ParseError[];
+}
+
+export const KNOWN_COLORS = Object.keys(PALETTE);
+const COLOR_SET = new Set(KNOWN_COLORS);
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+const DATE = '(\\d{4}-\\d{2}-\\d{2})';
+const COLOR = '(#?\\w+)';
+// Every statement may end with trailing whitespace or a trailing # comment
+const EOL = '\\s*(?:#.*)?$';
+
+const PATTERNS = {
+  window: new RegExp(`^window\\s+from\\s+${DATE}\\s+to\\s+${DATE}${EOL}`),
+  track: new RegExp(`^track\\s+"([^"]+)"${EOL}`),
+  row: new RegExp(`^row\\s+"([^"]+)"(\\s+hidden)?${EOL}`),
+  bar: new RegExp(`^bar\\s+"([^"]+)"\\s+from\\s+${DATE}\\s+to\\s+${DATE}\\s+color\\s+${COLOR}(?:\\s+text\\s+(left|right|top|bottom|center))?(?:\\s+label\\s+"([^"]+)")?${EOL}`),
+  point: new RegExp(`^point\\s+"([^"]+)"\\s+at\\s+${DATE}(?:\\s+shape\\s+(triangle|triangle-down|circle|square))?\\s+color\\s+${COLOR}(?:\\s+text\\s+(left|right|top|bottom|center))?(?:\\s+label\\s+"([^"]+)")?${EOL}`),
+  recurring: new RegExp(`^recurring point\\s+"([^"]+)"\\s+(daily|weekly|monthly|yearly)\\s+from\\s+${DATE}\\s+to\\s+${DATE}(?:\\s+shape\\s+(triangle|triangle-down|circle|square))?\\s+color\\s+${COLOR}${EOL}`),
+  milestone: new RegExp(`^milestone\\s+"([^"]+)"\\s+at\\s+${DATE}(?:\\s+color\\s+${COLOR})?${EOL}`),
+};
+
+const SYNTAX_HINTS: Record<keyof typeof PATTERNS, string> = {
+  window: 'window from YYYY-MM-DD to YYYY-MM-DD',
+  track: 'track "name"',
+  row: 'row "name" [hidden]',
+  bar: 'bar "name" from YYYY-MM-DD to YYYY-MM-DD color <color> [text left|right|top|bottom|center] [label "text"]',
+  point: 'point "name" at YYYY-MM-DD [shape triangle|triangle-down|circle|square] color <color> [text ...] [label "text"]',
+  recurring: 'recurring point "name" daily|weekly|monthly|yearly from YYYY-MM-DD to YYYY-MM-DD [shape ...] color <color>',
+  milestone: 'milestone "name" at YYYY-MM-DD [color <color>]',
+};
 
 function generateRecurringDates(startDate: string, endDate: string, frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'): string[] {
   const dates: string[] = [];
@@ -8,7 +48,7 @@ function generateRecurringDates(startDate: string, endDate: string, frequency: '
 
   while (current <= end) {
     dates.push(current.toISOString().split('T')[0]);
-    
+
     switch (frequency) {
       case 'daily':
         current.setDate(current.getDate() + 1);
@@ -28,120 +68,148 @@ function generateRecurringDates(startDate: string, endDate: string, frequency: '
   return dates;
 }
 
-export function parseTimelineDSL(dsl: string): TimelineData {
+export function parseTimelineDSL(dsl: string): ParseResult {
   const lines = dsl.split('\n');
-  const timelineData: TimelineData = {
+  const data: TimelineData = {
     tracks: [],
     milestones: []
   };
+  const errors: ParseError[] = [];
 
   let currentTrack: Track | null = null;
   let currentRow: Row | null = null;
 
+  const syntaxError = (line: number, keyword: keyof typeof PATTERNS) => {
+    errors.push({ line, message: `Invalid ${keyword === 'recurring' ? 'recurring point' : keyword} syntax. Expected: ${SYNTAX_HINTS[keyword]}` });
+  };
+
+  const checkColor = (line: number, color: string | undefined) => {
+    if (!color) return;
+    if (isHexColor(color)) {
+      if (!HEX_COLOR.test(color)) {
+        errors.push({ line, message: `Invalid hex color "${color}". Expected #rgb or #rrggbb` });
+      }
+    } else if (!COLOR_SET.has(color)) {
+      errors.push({ line, message: `Unknown color "${color}". Available colors: ${KNOWN_COLORS.join(', ')}, or a hex value like #12b886` });
+    }
+  };
+
+  const checkDateOrder = (line: number, start: string, end: string) => {
+    if (new Date(end) < new Date(start)) {
+      errors.push({ line, message: `End date ${end} is before start date ${start}` });
+    }
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
+    const lineNo = i + 1;
 
     if (!line || line.startsWith('#')) continue;
 
-    // Handle window
     if (line.startsWith('window')) {
-      const windowMatch = line.match(/window\s+from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/);
-      if (windowMatch) {
-        timelineData.window = { start: windowMatch[1], end: windowMatch[2] };
-      }
+      const match = line.match(PATTERNS.window);
+      if (!match) { syntaxError(lineNo, 'window'); continue; }
+      checkDateOrder(lineNo, match[1], match[2]);
+      data.window = { start: match[1], end: match[2] };
     }
-    // Handle track
     else if (line.startsWith('track')) {
-      const nameMatch = line.match(/track\s+"([^"]+)"/);
-      if (nameMatch) {
-        currentTrack = {
-          name: nameMatch[1],
-          rows: []
-        };
-        timelineData.tracks.push(currentTrack);
-        currentRow = null;
-      }
+      const match = line.match(PATTERNS.track);
+      if (!match) { syntaxError(lineNo, 'track'); continue; }
+      currentTrack = { name: match[1], rows: [] };
+      data.tracks.push(currentTrack);
+      currentRow = null;
     }
-    // Handle row
-    else if (line.startsWith('row') && currentTrack) {
-      const nameMatch = line.match(/row\s+"([^"]+)"(?:\s+hidden)?/);
-      if (nameMatch) {
-        const row: Row = {
-          name: nameMatch[1],
-          items: [],
-          hideName: line.trim().endsWith(' hidden')
-        };
-        currentTrack.rows.push(row);
-        currentRow = row;
+    else if (line.startsWith('row')) {
+      if (!currentTrack) {
+        errors.push({ line: lineNo, message: 'A row must appear inside a track' });
+        continue;
       }
+      const match = line.match(PATTERNS.row);
+      if (!match) { syntaxError(lineNo, 'row'); continue; }
+      const row: Row = {
+        name: match[1],
+        items: [],
+        hideName: Boolean(match[2])
+      };
+      currentTrack.rows.push(row);
+      currentRow = row;
     }
-    // Handle bar
-    else if (line.startsWith('bar') && currentRow) {
-      const barMatch = line.match(/bar\s+"([^"]+)"\s+from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})\s+color\s+(\w+)(?:\s+text\s+(left|right|top|bottom|center))?(?:\s+label\s+"([^"]+)")?/);
-      if (barMatch) {
-        const barItem: BarItem = {
-          type: 'bar',
-          name: barMatch[1],
-          startDate: barMatch[2],
-          endDate: barMatch[3],
-          color: barMatch[4],
-          textAnchor: barMatch[5] as 'left' | 'right' | 'top' | 'bottom' | 'center' || 'center',
-          label: barMatch[6]
-        };
-        currentRow.items.push(barItem);
+    else if (line.startsWith('recurring point')) {
+      if (!currentRow) {
+        errors.push({ line: lineNo, message: 'A recurring point must appear inside a row' });
+        continue;
       }
-    }
-    // Handle point
-    else if (line.startsWith('point') && currentRow) {
-      const pointMatch = line.match(/point\s+"([^"]+)"\s+at\s+(\d{4}-\d{2}-\d{2})(?:\s+shape\s+(triangle|triangle-down|circle|square))?\s+color\s+(\w+)(?:\s+text\s+(left|right|top|bottom|center))?(?:\s+label\s+"([^"]+)")?/);
-      if (pointMatch) {
+      const match = line.match(PATTERNS.recurring);
+      if (!match) { syntaxError(lineNo, 'recurring'); continue; }
+      checkDateOrder(lineNo, match[3], match[4]);
+      checkColor(lineNo, match[6]);
+      const dates = generateRecurringDates(match[3], match[4], match[2] as 'daily' | 'weekly' | 'monthly' | 'yearly');
+      for (const date of dates) {
         const pointItem: PointItem = {
           type: 'point',
-          name: pointMatch[1],
-          date: pointMatch[2],
-          shape: (pointMatch[3] || 'triangle') as 'triangle' | 'triangle-down' | 'circle' | 'square',
-          color: pointMatch[4],
-          textAnchor: pointMatch[5] as 'left' | 'right' | 'top' | 'bottom' | 'center' || 'center',
-          label: pointMatch[6]
+          name: match[1],
+          date,
+          shape: (match[5] || 'triangle') as PointItem['shape'],
+          color: match[6]
         };
         currentRow.items.push(pointItem);
       }
     }
-    // Handle recurring point
-    else if (line.startsWith('recurring point') && currentRow) {
-      const recurringMatch = line.match(/recurring point\s+"([^"]+)"\s+(daily|weekly|monthly|yearly)\s+from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})(?:\s+shape\s+(\w+))?\s+color\s+(\w+)/);
-      if (recurringMatch) {
-        const dates = generateRecurringDates(
-          recurringMatch[3],
-          recurringMatch[4],
-          recurringMatch[2] as 'daily' | 'weekly' | 'monthly' | 'yearly'
-        );
-
-        dates.forEach(date => {
-          const pointItem: PointItem = {
-            type: 'point',
-            name: recurringMatch[1],
-            date: date,
-            shape: (recurringMatch[5] || 'triangle') as 'triangle' | 'circle' | 'square',
-            color: recurringMatch[6]
-          };
-          currentRow!.items.push(pointItem);
-        });
+    else if (line.startsWith('bar')) {
+      if (!currentRow) {
+        errors.push({ line: lineNo, message: 'A bar must appear inside a row' });
+        continue;
       }
+      const match = line.match(PATTERNS.bar);
+      if (!match) { syntaxError(lineNo, 'bar'); continue; }
+      checkDateOrder(lineNo, match[2], match[3]);
+      checkColor(lineNo, match[4]);
+      const barItem: BarItem = {
+        type: 'bar',
+        name: match[1],
+        startDate: match[2],
+        endDate: match[3],
+        color: match[4],
+        textAnchor: (match[5] as BarItem['textAnchor']) || 'center',
+        label: match[6]
+      };
+      currentRow.items.push(barItem);
     }
-    // Handle milestone
-    else if (line.startsWith('milestone')) {
-      const milestoneMatch = line.match(/milestone\s+"([^"]+)"\s+at\s+(\d{4}-\d{2}-\d{2})(?:\s+color\s+(\w+))?/);
-      if (milestoneMatch) {
-        const milestone: Milestone = {
-          name: milestoneMatch[1],
-          date: milestoneMatch[2],
-          color: milestoneMatch[3] || 'blue'
-        };
-        timelineData.milestones.push(milestone);
+    else if (line.startsWith('point')) {
+      if (!currentRow) {
+        errors.push({ line: lineNo, message: 'A point must appear inside a row' });
+        continue;
       }
+      const match = line.match(PATTERNS.point);
+      if (!match) { syntaxError(lineNo, 'point'); continue; }
+      checkColor(lineNo, match[4]);
+      const pointItem: PointItem = {
+        type: 'point',
+        name: match[1],
+        date: match[2],
+        shape: (match[3] || 'triangle') as PointItem['shape'],
+        color: match[4],
+        textAnchor: (match[5] as PointItem['textAnchor']) || 'center',
+        label: match[6]
+      };
+      currentRow.items.push(pointItem);
+    }
+    else if (line.startsWith('milestone')) {
+      const match = line.match(PATTERNS.milestone);
+      if (!match) { syntaxError(lineNo, 'milestone'); continue; }
+      checkColor(lineNo, match[3]);
+      const milestone: Milestone = {
+        name: match[1],
+        date: match[2],
+        color: match[3] || 'blue'
+      };
+      data.milestones.push(milestone);
+    }
+    else {
+      const keyword = line.split(/\s+/)[0];
+      errors.push({ line: lineNo, message: `Unknown keyword "${keyword}". Expected one of: window, track, row, bar, point, recurring point, milestone` });
     }
   }
 
-  return timelineData;
+  return { data, errors };
 }

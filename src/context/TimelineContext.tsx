@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { TimelineData } from '../types';
+import { TimelineData } from '../types/index';
 
 const TimelineContext = createContext<TimelineData | null>(null);
 

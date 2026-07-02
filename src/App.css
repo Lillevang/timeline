@@ -40,6 +40,61 @@
   letter-spacing: 0.02em;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.share-button {
+  height: 28px;
+  padding: 0 0.875rem;
+  border-radius: 14px;
+  border: 1px solid var(--accent-dark);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.share-button:hover:not(:disabled) {
+  background: var(--accent-dark);
+}
+
+.share-button:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.share-button.copied,
+.share-button.done {
+  background: #37b24d;
+  border-color: #2f9e44;
+}
+
+.share-link {
+  color: var(--header-text);
+  font-size: 0.8125rem;
+  font-family: 'Menlo', 'Monaco', monospace;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--text-muted);
+}
+
+.share-link:hover {
+  color: #fff;
+}
+
+.share-error {
+  color: #ffa8a8;
+  font-size: 0.8125rem;
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .help-button {
   width: 28px;
   height: 28px;

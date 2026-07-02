@@ -1,16 +1,23 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { TimelineData, Track, TimelineItem, Milestone, Row } from '../types';
+import { TimelineData, Track, TimelineItem, Milestone } from '../types/index';
+import { colorStyles, getExportStyles, isHexColor } from '../theme';
 import './Timeline.css';
 
 interface TimelineProps {
   data: TimelineData;
 }
 
+const colorClass = (base: string, color: string) =>
+  isHexColor(color) ? base : `${base} color-${color}`;
+const colorAttrs = (color: string) =>
+  isHexColor(color) ? { fill: color, stroke: color } : {};
+
 const Timeline: React.FC<TimelineProps> = ({ data }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [showWeekNumbers, setShowWeekNumbers] = useState(true);
   const [showDates, setShowDates] = useState(true);
+  const [showToday, setShowToday] = useState(true);
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '4:3' | 'free'>('free');
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
 
@@ -41,1004 +48,106 @@ const Timeline: React.FC<TimelineProps> = ({ data }) => {
     };
   }, []);
 
-  const getExportWidth = () => {
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // Build a standalone SVG for export by cloning what's on screen, so exports
+  // are WYSIWYG (Weeks/Dates toggles included). With a slide aspect ratio
+  // selected, the canvas extends to match the dashed overlay in the preview.
+  const buildExportSvg = (): { svg: SVGSVGElement; width: number; height: number } | null => {
+    const svgElement = svgRef.current;
+    if (!svgElement) return null;
+
+    const padding = 20;
     const target = ASPECT_RATIOS[aspectRatio];
-    return target ? target.width : Math.max(dimensions.width, 1200);
+    const vbWidth = dimensions.width + padding * 2;
+    const contentHeight = totalHeight + padding * 2;
+    const vbHeight = target
+      ? Math.max(contentHeight, vbWidth * (target.height / target.width))
+      : contentHeight;
+    const width = target ? target.width : Math.max(dimensions.width, 1200);
+    const height = Math.round(width * (vbHeight / vbWidth));
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('xmlns', SVG_NS);
+    svg.setAttribute('width', width.toString());
+    svg.setAttribute('height', height.toString());
+    svg.setAttribute('viewBox', `${-padding} ${-padding} ${vbWidth} ${vbHeight}`);
+
+    const bg = document.createElementNS(SVG_NS, 'rect');
+    bg.setAttribute('x', (-padding).toString());
+    bg.setAttribute('y', (-padding).toString());
+    bg.setAttribute('width', vbWidth.toString());
+    bg.setAttribute('height', vbHeight.toString());
+    bg.setAttribute('fill', '#ffffff');
+    svg.appendChild(bg);
+
+    const style = document.createElementNS(SVG_NS, 'style');
+    style.textContent = getExportStyles();
+    svg.appendChild(style);
+
+    const headerDates = svgElement.querySelector('.timeline-header-dates');
+    if (headerDates) svg.appendChild(headerDates.cloneNode(true));
+    svgElement.querySelectorAll('.timeline-track, .timeline-milestone, .timeline-today').forEach(el => {
+      svg.appendChild(el.cloneNode(true));
+    });
+
+    return { svg, width, height };
+  };
+
+  const svgToBlob = (svg: SVGSVGElement): Blob =>
+    new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml;charset=utf-8' });
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const exportSVG = () => {
-    const svgElement = svgRef.current;
-    if (!svgElement) return;
-
-    // Create a new SVG element
-    const newSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-
-    // Set dimensions
-    const downloadWidth = getExportWidth();
-    const downloadHeight = totalHeight;
-    newSvg.setAttribute('width', downloadWidth.toString());
-    newSvg.setAttribute('height', downloadHeight.toString());
-    
-    // Add padding to viewBox
-    const padding = 20;
-    const newViewBox = [
-      -padding,
-      -padding,
-      downloadWidth + (padding * 2),
-      downloadHeight + (padding * 2)
-    ];
-    newSvg.setAttribute('viewBox', newViewBox.join(' '));
-    
-    // Add background
-    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bgRect.setAttribute('width', '100%');
-    bgRect.setAttribute('height', '100%');
-    bgRect.setAttribute('fill', '#ffffff');
-    newSvg.appendChild(bgRect);
-    
-    // Add styles
-    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = `
-      .timeline-track-bg { fill: #ffffff; stroke: #e9ecef; stroke-width: 1; }
-      .timeline-track-label { font-weight: 600; font-size: 14px; fill: #495057; text-transform: uppercase; letter-spacing: 0.5px; }
-      .timeline-row-label { font-size: 12px; fill: #495057; font-weight: 500; }
-      .timeline-grid-line { stroke: #f1f3f5; stroke-width: 1; }
-      .timeline-month-label { font-size: 12px; fill: #495057; font-weight: 500; }
-      .timeline-day-label { font-size: 12px; fill: #6c757d; }
-      .timeline-bar-rect { stroke-width: 1; opacity: 0.9; }
-      .timeline-bar-label { font-size: 12px; fill: #212529; font-weight: 500; }
-      .timeline-point-label { font-size: 12px; fill: #212529; font-weight: 500; }
-      .timeline-milestone-line { stroke-width: 2; stroke-dasharray: 4 2; opacity: 0.7; }
-      .timeline-milestone-marker { stroke-width: 2; opacity: 0.9; }
-      .timeline-milestone-label { font-size: 14px; fill: #212529; font-weight: 600; }
-      .timeline-milestone-bg { fill: white; stroke: none; }
-      .timeline-today-line { stroke: #fa5252; stroke-width: 2; stroke-dasharray: 4 4; opacity: 0.7; }
-      .timeline-today-stipple { stroke: #fa5252; stroke-width: 1; stroke-dasharray: 1 3; opacity: 0.3; }
-      .timeline-today-bg { fill: #fa5252; rx: 4; ry: 4; }
-      .timeline-today-label { fill: white; font-size: 12px; font-weight: 600; }
-      .color-blue { fill: #339af0; stroke: #228be6; }
-      .color-green { fill: #40c057; stroke: #37b24d; }
-      .color-yellow { fill: #fcc419; stroke: #f59f00; }
-      .color-orange { fill: #fd7e14; stroke: #f76707; }
-      .color-red { fill: #fa5252; stroke: #f03e3e; }
-      .color-purple { fill: #cc5de8; stroke: #be4bdb; }
-      .color-gray { fill: #868e96; stroke: #495057; }
-    `;
-    newSvg.appendChild(style);
-    
-    // Create a group for all content
-    const contentGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    contentGroup.setAttribute('transform', `translate(${padding}, ${padding})`);
-    
-    // Add all the timeline content
-    const headerDates = svgElement.querySelector('.timeline-header-dates');
-    if (headerDates) {
-      contentGroup.appendChild(headerDates.cloneNode(true));
-    }
-    
-    // Add tracks
-    let yOffset = topMargin;
-    data.tracks.forEach((track, trackIndex) => {
-      const trackGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      trackGroup.setAttribute('class', 'timeline-track');
-      
-      // Calculate if text needs wrapping
-      const maxWidth = leftMargin - 30; // Leave some padding
-      const words = track.name.split(' ');
-      const lines: string[] = [];
-      let currentLine = '';
-      
-      words.forEach(word => {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        // Approximate text width (rough estimate: 8px per character)
-        const estimatedWidth = testLine.length * 8;
-        
-        if (estimatedWidth > maxWidth) {
-          if (currentLine) {
-            lines.push(currentLine);
-            currentLine = word;
-          } else {
-            // If a single word is too long, split it
-            lines.push(word);
-            currentLine = '';
-          }
-        } else {
-          currentLine = testLine;
-        }
-      });
-      if (currentLine) {
-        lines.push(currentLine);
-      }
-
-      // Determine font size based on number of lines
-      const fontSize = lines.length > 1 ? '0.75rem' : '0.875rem';
-      
-      // Calculate extra padding needed for wrapped text
-      const extraPadding = Math.max(0, (lines.length - 1) * 16); // 16px per additional line
-      const trackTotalHeight = baseTrackHeight + (track.rows.length * rowHeight) + extraPadding;
-      
-      // Add track label with wrapping
-      const trackLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      trackLabel.setAttribute('x', (leftMargin - 20).toString());
-      trackLabel.setAttribute('y', (yOffset - 5).toString());
-      trackLabel.setAttribute('class', 'timeline-track-label');
-      trackLabel.setAttribute('text-anchor', 'end');
-      trackLabel.setAttribute('style', `font-size: ${fontSize}`);
-      
-      lines.forEach((line, i) => {
-        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-        tspan.setAttribute('x', (leftMargin - 20).toString());
-        tspan.setAttribute('dy', i === 0 ? '0' : '16');
-        tspan.textContent = line;
-        trackLabel.appendChild(tspan);
-      });
-      trackGroup.appendChild(trackLabel);
-      
-      // Add track background
-      const trackBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      trackBg.setAttribute('x', leftMargin.toString());
-      trackBg.setAttribute('y', yOffset.toString());
-      trackBg.setAttribute('width', (downloadWidth - leftMargin - 10).toString());
-      trackBg.setAttribute('height', trackTotalHeight.toString());
-      trackBg.setAttribute('class', 'timeline-track-bg');
-      trackGroup.appendChild(trackBg);
-      
-      // Add rows and items
-      track.rows.forEach((row, rowIndex) => {
-        const rowY = yOffset + extraPadding + rowIndex * rowHeight + 10;
-        
-        // Add row label if not hidden
-        if (!row.hideName) {
-          const rowLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          rowLabel.setAttribute('x', (leftMargin - 20).toString());
-          rowLabel.setAttribute('y', (rowY + rowHeight / 2).toString());
-          rowLabel.setAttribute('class', 'timeline-row-label');
-          rowLabel.setAttribute('text-anchor', 'end');
-          rowLabel.textContent = row.name;
-          trackGroup.appendChild(rowLabel);
-        }
-        
-        // Add items
-        row.items.forEach(item => {
-          if (item.type === 'bar') {
-            const barGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            barGroup.setAttribute('class', 'timeline-bar');
-            
-            const barRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            const startX = dateToX(new Date(item.startDate));
-            const endX = dateToX(new Date(item.endDate));
-            barRect.setAttribute('x', startX.toString());
-            barRect.setAttribute('y', (rowY + 5).toString());
-            barRect.setAttribute('width', (endX - startX).toString());
-            barRect.setAttribute('height', (rowHeight - 10).toString());
-            barRect.setAttribute('class', `timeline-bar-rect color-${item.color}`);
-            barRect.setAttribute('rx', '3');
-            barRect.setAttribute('ry', '3');
-            barGroup.appendChild(barRect);
-            
-            // Add bar label with proper anchoring
-            const barLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            let labelX = startX;
-            let textAnchor = 'start';
-            let transform = '';
-            
-            switch (item.textAnchor) {
-              case 'left':
-                labelX = startX;
-                textAnchor = 'start';
-                transform = 'translateX(-10px)';
-                break;
-              case 'right':
-                labelX = endX;
-                textAnchor = 'end';
-                transform = 'translateX(10px)';
-                break;
-              default: // center
-                labelX = (startX + endX) / 2;
-                textAnchor = 'middle';
-                transform = 'translateX(5px)';
-            }
-            
-            barLabel.setAttribute('x', labelX.toString());
-            barLabel.setAttribute('y', (rowY + rowHeight / 2).toString());
-            barLabel.setAttribute('class', 'timeline-bar-label');
-            barLabel.setAttribute('text-anchor', textAnchor);
-            barLabel.setAttribute('dominant-baseline', 'middle');
-            barLabel.setAttribute('style', `transform: ${transform}`);
-            barLabel.textContent = item.name;
-            barGroup.appendChild(barLabel);
-            
-            // Add bar label if present
-            if (item.label) {
-              const label = processLabel(item.label, item);
-              if (label) {
-                const barSubLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                barSubLabel.setAttribute('x', ((startX + endX) / 2).toString());
-                barSubLabel.setAttribute('y', (rowY + rowHeight / 2 + 16).toString());
-                barSubLabel.setAttribute('class', 'timeline-bar-label');
-                barSubLabel.setAttribute('text-anchor', 'middle');
-                barSubLabel.setAttribute('dominant-baseline', 'middle');
-                barSubLabel.setAttribute('style', 'font-size: 10px; opacity: 0.8; transform: translateX(5px)');
-                barSubLabel.textContent = label;
-                barGroup.appendChild(barSubLabel);
-              }
-            }
-            
-            trackGroup.appendChild(barGroup);
-          } else if (item.type === 'point') {
-            const pointGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            pointGroup.setAttribute('class', 'timeline-point');
-            
-            const pointX = dateToX(new Date(item.date));
-            const pointY = rowY + 5;
-            
-            // Add point shape
-            let shapeElement;
-            switch (item.shape) {
-              case 'circle':
-                shapeElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                shapeElement.setAttribute('cx', pointX.toString());
-                shapeElement.setAttribute('cy', (pointY + 5).toString());
-                shapeElement.setAttribute('r', '5');
-                break;
-              case 'square':
-                shapeElement = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                shapeElement.setAttribute('x', (pointX - 5).toString());
-                shapeElement.setAttribute('y', pointY.toString());
-                shapeElement.setAttribute('width', '10');
-                shapeElement.setAttribute('height', '10');
-                break;
-              case 'triangle-down':
-                shapeElement = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-                shapeElement.setAttribute('points', `${pointX},${pointY + 10} ${pointX - 6},${pointY} ${pointX + 6},${pointY}`);
-                break;
-              default: // triangle
-                shapeElement = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-                shapeElement.setAttribute('points', `${pointX},${pointY} ${pointX - 6},${pointY + 10} ${pointX + 6},${pointY + 10}`);
-            }
-            shapeElement.setAttribute('class', `timeline-point-shape color-${item.color}`);
-            pointGroup.appendChild(shapeElement);
-            
-            // Add point label with proper anchoring
-            const pointLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            let labelX = pointX;
-            let textAnchor = 'middle';
-            let dominantBaseline = 'text-after-edge';
-            let transform = '';
-            
-            switch (item.textAnchor) {
-              case 'left':
-                labelX = pointX;
-                textAnchor = 'end';
-                dominantBaseline = 'middle';
-                transform = 'translateX(-10px)';
-                break;
-              case 'right':
-                labelX = pointX;
-                textAnchor = 'start';
-                dominantBaseline = 'middle';
-                transform = 'translateX(10px)';
-                break;
-              case 'top':
-                labelX = pointX;
-                textAnchor = 'middle';
-                dominantBaseline = 'text-after-edge';
-                transform = 'translateY(-15px)';
-                break;
-              case 'bottom':
-                labelX = pointX;
-                textAnchor = 'middle';
-                dominantBaseline = 'text-before-edge';
-                transform = 'translateY(15px)';
-                break;
-              default: // center
-                labelX = pointX;
-                textAnchor = 'middle';
-                dominantBaseline = 'text-after-edge';
-                transform = 'translateY(-2px)';
-            }
-            
-            pointLabel.setAttribute('x', labelX.toString());
-            pointLabel.setAttribute('y', rowY.toString());
-            pointLabel.setAttribute('class', 'timeline-point-label');
-            pointLabel.setAttribute('text-anchor', textAnchor);
-            pointLabel.setAttribute('dominant-baseline', dominantBaseline);
-            pointLabel.setAttribute('style', `transform: ${transform}`);
-            pointLabel.textContent = item.name;
-            
-            // Add point label if present
-            if (item.label) {
-              const label = processLabel(item.label, item);
-              if (label) {
-                const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-                tspan.setAttribute('dx', '8');
-                tspan.setAttribute('style', 'font-size: 10px; opacity: 0.8; font-weight: normal');
-                tspan.textContent = label;
-                pointLabel.appendChild(tspan);
-              }
-            }
-            
-            pointGroup.appendChild(pointLabel);
-            
-            trackGroup.appendChild(pointGroup);
-          }
-        });
-      });
-      
-      contentGroup.appendChild(trackGroup);
-      yOffset += trackTotalHeight;
-    });
-    
-    // Add milestones
-    if (data.milestones) {
-      data.milestones.forEach((milestone, index) => {
-        const milestoneGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        milestoneGroup.setAttribute('class', 'timeline-milestone');
-        
-        const x = dateToX(new Date(milestone.date));
-        
-        // Add milestone line
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', x.toString());
-        line.setAttribute('y1', topMargin.toString());
-        line.setAttribute('x2', x.toString());
-        line.setAttribute('y2', totalHeight.toString());
-        line.setAttribute('class', `timeline-milestone-line color-${milestone.color}`);
-        milestoneGroup.appendChild(line);
-        
-        // Add milestone marker
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        marker.setAttribute('cx', x.toString());
-        marker.setAttribute('cy', topMargin.toString());
-        marker.setAttribute('r', '4');
-        marker.setAttribute('class', `timeline-milestone-marker color-${milestone.color}`);
-        milestoneGroup.appendChild(marker);
-        
-        // Add milestone label
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        label.setAttribute('x', x.toString());
-        label.setAttribute('y', (topMargin - 10).toString());
-        label.setAttribute('class', 'timeline-milestone-label');
-        label.setAttribute('text-anchor', 'middle');
-        label.textContent = milestone.name;
-        milestoneGroup.appendChild(label);
-        
-        contentGroup.appendChild(milestoneGroup);
-      });
-    }
-    
-    // Add today indicator if applicable
-    const today = new Date();
-    if (today >= minDate && today <= maxDate) {
-      const todayGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      todayGroup.setAttribute('class', 'timeline-today');
-      
-      const x = dateToX(today);
-      const labelY = topMargin - 35;
-      
-      // Add today line
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', x.toString());
-      line.setAttribute('y1', (labelY + 20).toString());
-      line.setAttribute('x2', x.toString());
-      line.setAttribute('y2', totalHeight.toString());
-      line.setAttribute('class', 'timeline-today-line');
-      todayGroup.appendChild(line);
-      
-      // Add stippled line
-      const stipple = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      stipple.setAttribute('x1', x.toString());
-      stipple.setAttribute('y1', (labelY + 20).toString());
-      stipple.setAttribute('x2', x.toString());
-      stipple.setAttribute('y2', totalHeight.toString());
-      stipple.setAttribute('class', 'timeline-today-stipple');
-      todayGroup.appendChild(stipple);
-      
-      // Add today label background
-      const labelBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      labelBg.setAttribute('x', (x - 30).toString());
-      labelBg.setAttribute('y', labelY.toString());
-      labelBg.setAttribute('width', '60');
-      labelBg.setAttribute('height', '20');
-      labelBg.setAttribute('class', 'timeline-today-bg');
-      todayGroup.appendChild(labelBg);
-      
-      // Add today label
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', x.toString());
-      label.setAttribute('y', (labelY + 15).toString());
-      label.setAttribute('class', 'timeline-today-label');
-      label.setAttribute('text-anchor', 'middle');
-      label.textContent = 'Today';
-      todayGroup.appendChild(label);
-      
-      contentGroup.appendChild(todayGroup);
-    }
-    
-    newSvg.appendChild(contentGroup);
-    
-    // Create the SVG data
-    const svgData = new XMLSerializer().serializeToString(newSvg);
-    const svgWithDoctype = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-${svgData}`;
-    
-    const svgBlob = new Blob([svgWithDoctype], { type: 'image/svg+xml;charset=utf-8' });
-    const svgUrl = URL.createObjectURL(svgBlob);
-    
-    // Create a download link
-    const downloadLink = document.createElement('a');
-    downloadLink.href = svgUrl;
-    downloadLink.download = 'timeline.svg';
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
-    URL.revokeObjectURL(svgUrl);
+    const built = buildExportSvg();
+    if (!built) return;
+    downloadBlob(svgToBlob(built.svg), 'timeline.svg');
   };
 
-  const buildExportSvgBlob = (): Promise<{ blob: Blob; width: number; height: number }> => {
-    return new Promise((resolve) => {
-      const svgElement = svgRef.current;
-      if (!svgElement) return;
-
-      const downloadWidth = getExportWidth();
-      const downloadHeight = totalHeight;
-      const padding = 20;
-
-      const newSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      newSvg.setAttribute('width', downloadWidth.toString());
-      newSvg.setAttribute('height', downloadHeight.toString());
-      newSvg.setAttribute('viewBox', `${-padding} ${-padding} ${downloadWidth + padding * 2} ${downloadHeight + padding * 2}`);
-
-      const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      bgRect.setAttribute('width', '100%');
-      bgRect.setAttribute('height', '100%');
-      bgRect.setAttribute('fill', '#ffffff');
-      newSvg.appendChild(bgRect);
-
-      const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-      style.textContent = getExportStyles();
-      newSvg.appendChild(style);
-
-      const contentGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      contentGroup.setAttribute('transform', `translate(${padding}, ${padding})`);
-
-      const headerDates = svgElement.querySelector('.timeline-header-dates');
-      if (headerDates) contentGroup.appendChild(headerDates.cloneNode(true));
-
-      svgElement.querySelectorAll('.timeline-track').forEach(el => {
-        contentGroup.appendChild(el.cloneNode(true));
-      });
-      svgElement.querySelectorAll('.timeline-milestone').forEach(el => {
-        contentGroup.appendChild(el.cloneNode(true));
-      });
-      const todayEl = svgElement.querySelector('.timeline-today');
-      if (todayEl) contentGroup.appendChild(todayEl.cloneNode(true));
-
-      newSvg.appendChild(contentGroup);
-
-      const svgData = new XMLSerializer().serializeToString(newSvg);
-      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      resolve({ blob, width: downloadWidth, height: downloadHeight });
-    });
-  };
-
-  const getExportStyles = () => `
-    .timeline-track-bg { fill: #f8f9fa; stroke: #e9ecef; stroke-width: 1; }
-    .timeline-track-label { font-weight: 700; font-size: 13px; fill: #343a40; text-transform: uppercase; letter-spacing: 0.8px; }
-    .timeline-row-label { font-size: 11px; fill: #6c757d; font-weight: 500; }
-    .timeline-grid-line { stroke: #f1f3f5; stroke-width: 1; }
-    .timeline-month-label { font-size: 11px; fill: #495057; font-weight: 600; }
-    .timeline-day-label { font-size: 10px; fill: #adb5bd; }
-    .timeline-week-label { font-size: 10px; fill: #868e96; font-weight: 500; }
-    .timeline-bar-rect { stroke-width: 0; opacity: 1; rx: 4; }
-    .timeline-bar-label { font-size: 11px; fill: white; font-weight: 600; }
-    .timeline-point-label { font-size: 11px; fill: #212529; font-weight: 500; }
-    .timeline-point-shape { stroke-width: 0; }
-    .timeline-milestone-line { stroke-width: 1.5; stroke-dasharray: 4 3; opacity: 0.6; }
-    .timeline-milestone-marker { stroke-width: 0; opacity: 1; }
-    .timeline-milestone-label { font-size: 12px; fill: #212529; font-weight: 600; }
-    .timeline-milestone-bg { fill: white; stroke: none; }
-    .timeline-today-line { stroke: #fa5252; stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.8; }
-    .timeline-today-stipple { stroke: #fa5252; stroke-width: 1; stroke-dasharray: 1 3; opacity: 0.25; }
-    .timeline-today-bg { fill: #fa5252; }
-    .timeline-today-label { fill: white; font-size: 11px; font-weight: 600; }
-    .color-blue { fill: #339af0; stroke: #339af0; }
-    .color-green { fill: #40c057; stroke: #40c057; }
-    .color-yellow { fill: #fcc419; stroke: #fcc419; }
-    .color-orange { fill: #fd7e14; stroke: #fd7e14; }
-    .color-red { fill: #fa5252; stroke: #fa5252; }
-    .color-purple { fill: #cc5de8; stroke: #cc5de8; }
-    .color-gray { fill: #868e96; stroke: #868e96; }
-    .color-pink { fill: #f06595; stroke: #f06595; }
-    .color-cyan { fill: #15aabf; stroke: #15aabf; }
-    .color-teal { fill: #12b886; stroke: #12b886; }
-    .color-indigo { fill: #5c7cfa; stroke: #5c7cfa; }
-    .color-violet { fill: #845ef7; stroke: #845ef7; }
-    .color-lime { fill: #82c91e; stroke: #82c91e; }
-    .color-lightblue { fill: #74c0fc; stroke: #74c0fc; }
-    .color-lightgreen { fill: #8ce99a; stroke: #8ce99a; }
-  `;
-
-  const exportPNG = () => {
-    const svgElement = svgRef.current;
-    if (!svgElement) return;
-
-    // Create a new SVG element
-    const newSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-
-    // Set dimensions
-    const downloadWidth = getExportWidth();
-    const downloadHeight = totalHeight;
-    newSvg.setAttribute('width', downloadWidth.toString());
-    newSvg.setAttribute('height', downloadHeight.toString());
-    
-    // Add padding to viewBox
-    const padding = 20;
-    const newViewBox = [
-      -padding,
-      -padding,
-      downloadWidth + (padding * 2),
-      downloadHeight + (padding * 2)
-    ];
-    newSvg.setAttribute('viewBox', newViewBox.join(' '));
-    
-    // Add background
-    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bgRect.setAttribute('width', '100%');
-    bgRect.setAttribute('height', '100%');
-    bgRect.setAttribute('fill', '#ffffff');
-    newSvg.appendChild(bgRect);
-    
-    // Add styles
-    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = `
-      .timeline-track-bg { fill: #ffffff; stroke: #e9ecef; stroke-width: 1; }
-      .timeline-track-label { font-weight: 600; font-size: 14px; fill: #495057; text-transform: uppercase; letter-spacing: 0.5px; }
-      .timeline-row-label { font-size: 12px; fill: #495057; font-weight: 500; }
-      .timeline-grid-line { stroke: #f1f3f5; stroke-width: 1; }
-      .timeline-month-label { font-size: 12px; fill: #495057; font-weight: 500; }
-      .timeline-day-label { font-size: 12px; fill: #6c757d; }
-      .timeline-bar-rect { stroke-width: 1; opacity: 0.9; }
-      .timeline-bar-label { font-size: 12px; fill: #212529; font-weight: 500; }
-      .timeline-point-label { font-size: 12px; fill: #212529; font-weight: 500; }
-      .timeline-milestone-line { stroke-width: 2; stroke-dasharray: 4 2; opacity: 0.7; }
-      .timeline-milestone-marker { stroke-width: 2; opacity: 0.9; }
-      .timeline-milestone-label { font-size: 14px; fill: #212529; font-weight: 600; }
-      .timeline-milestone-bg { fill: white; stroke: none; }
-      .timeline-today-line { stroke: #fa5252; stroke-width: 2; stroke-dasharray: 4 4; opacity: 0.7; }
-      .timeline-today-stipple { stroke: #fa5252; stroke-width: 1; stroke-dasharray: 1 3; opacity: 0.3; }
-      .timeline-today-bg { fill: #fa5252; rx: 4; ry: 4; }
-      .timeline-today-label { fill: white; font-size: 12px; font-weight: 600; }
-      .color-blue { fill: #339af0; stroke: #228be6; }
-      .color-green { fill: #40c057; stroke: #37b24d; }
-      .color-yellow { fill: #fcc419; stroke: #f59f00; }
-      .color-orange { fill: #fd7e14; stroke: #f76707; }
-      .color-red { fill: #fa5252; stroke: #f03e3e; }
-      .color-purple { fill: #cc5de8; stroke: #be4bdb; }
-      .color-gray { fill: #868e96; stroke: #495057; }
-    `;
-    newSvg.appendChild(style);
-    
-    // Create a group for all content
-    const contentGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    contentGroup.setAttribute('transform', `translate(${padding}, ${padding})`);
-    
-    // Add all the timeline content
-    const headerDates = svgElement.querySelector('.timeline-header-dates');
-    if (headerDates) {
-      contentGroup.appendChild(headerDates.cloneNode(true));
-    }
-    
-    // Add tracks
-    let yOffset = topMargin;
-    data.tracks.forEach((track, trackIndex) => {
-      const trackGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      trackGroup.setAttribute('class', 'timeline-track');
-      
-      // Calculate if text needs wrapping
-      const maxWidth = leftMargin - 30; // Leave some padding
-      const words = track.name.split(' ');
-      const lines: string[] = [];
-      let currentLine = '';
-      
-      words.forEach(word => {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        // Approximate text width (rough estimate: 8px per character)
-        const estimatedWidth = testLine.length * 8;
-        
-        if (estimatedWidth > maxWidth) {
-          if (currentLine) {
-            lines.push(currentLine);
-            currentLine = word;
-          } else {
-            // If a single word is too long, split it
-            lines.push(word);
-            currentLine = '';
-          }
-        } else {
-          currentLine = testLine;
-        }
-      });
-      if (currentLine) {
-        lines.push(currentLine);
-      }
-
-      // Determine font size based on number of lines
-      const fontSize = lines.length > 1 ? '0.75rem' : '0.875rem';
-      
-      // Calculate extra padding needed for wrapped text
-      const extraPadding = Math.max(0, (lines.length - 1) * 16); // 16px per additional line
-      const trackTotalHeight = baseTrackHeight + (track.rows.length * rowHeight) + extraPadding;
-      
-      // Add track label with wrapping
-      const trackLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      trackLabel.setAttribute('x', (leftMargin - 20).toString());
-      trackLabel.setAttribute('y', (yOffset - 5).toString());
-      trackLabel.setAttribute('class', 'timeline-track-label');
-      trackLabel.setAttribute('text-anchor', 'end');
-      trackLabel.setAttribute('style', `font-size: ${fontSize}`);
-      
-      lines.forEach((line, i) => {
-        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-        tspan.setAttribute('x', (leftMargin - 20).toString());
-        tspan.setAttribute('dy', i === 0 ? '0' : '16');
-        tspan.textContent = line;
-        trackLabel.appendChild(tspan);
-      });
-      trackGroup.appendChild(trackLabel);
-      
-      // Add track background
-      const trackBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      trackBg.setAttribute('x', leftMargin.toString());
-      trackBg.setAttribute('y', yOffset.toString());
-      trackBg.setAttribute('width', (downloadWidth - leftMargin - 10).toString());
-      trackBg.setAttribute('height', trackTotalHeight.toString());
-      trackBg.setAttribute('class', 'timeline-track-bg');
-      trackGroup.appendChild(trackBg);
-      
-      // Add rows and items
-      track.rows.forEach((row, rowIndex) => {
-        const rowY = yOffset + extraPadding + rowIndex * rowHeight + 10;
-        
-        // Add row label if not hidden
-        if (!row.hideName) {
-          const rowLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          rowLabel.setAttribute('x', (leftMargin - 20).toString());
-          rowLabel.setAttribute('y', (rowY + rowHeight / 2).toString());
-          rowLabel.setAttribute('class', 'timeline-row-label');
-          rowLabel.setAttribute('text-anchor', 'end');
-          rowLabel.textContent = row.name;
-          trackGroup.appendChild(rowLabel);
-        }
-        
-        // Add items
-        row.items.forEach(item => {
-          if (item.type === 'bar') {
-            const barGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            barGroup.setAttribute('class', 'timeline-bar');
-            
-            const barRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            const startX = dateToX(new Date(item.startDate));
-            const endX = dateToX(new Date(item.endDate));
-            barRect.setAttribute('x', startX.toString());
-            barRect.setAttribute('y', (rowY + 5).toString());
-            barRect.setAttribute('width', (endX - startX).toString());
-            barRect.setAttribute('height', (rowHeight - 10).toString());
-            barRect.setAttribute('class', `timeline-bar-rect color-${item.color}`);
-            barRect.setAttribute('rx', '3');
-            barRect.setAttribute('ry', '3');
-            barGroup.appendChild(barRect);
-            
-            // Add bar label with proper anchoring
-            const barLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            let labelX = startX;
-            let textAnchor = 'start';
-            let transform = '';
-            
-            switch (item.textAnchor) {
-              case 'left':
-                labelX = startX;
-                textAnchor = 'start';
-                transform = 'translateX(-10px)';
-                break;
-              case 'right':
-                labelX = endX;
-                textAnchor = 'end';
-                transform = 'translateX(10px)';
-                break;
-              default: // center
-                labelX = (startX + endX) / 2;
-                textAnchor = 'middle';
-                transform = 'translateX(5px)';
-            }
-            
-            barLabel.setAttribute('x', labelX.toString());
-            barLabel.setAttribute('y', (rowY + rowHeight / 2).toString());
-            barLabel.setAttribute('class', 'timeline-bar-label');
-            barLabel.setAttribute('text-anchor', textAnchor);
-            barLabel.setAttribute('dominant-baseline', 'middle');
-            barLabel.setAttribute('style', `transform: ${transform}`);
-            barLabel.textContent = item.name;
-            barGroup.appendChild(barLabel);
-            
-            // Add bar label if present
-            if (item.label) {
-              const label = processLabel(item.label, item);
-              if (label) {
-                const barSubLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                barSubLabel.setAttribute('x', ((startX + endX) / 2).toString());
-                barSubLabel.setAttribute('y', (rowY + rowHeight / 2 + 16).toString());
-                barSubLabel.setAttribute('class', 'timeline-bar-label');
-                barSubLabel.setAttribute('text-anchor', 'middle');
-                barSubLabel.setAttribute('dominant-baseline', 'middle');
-                barSubLabel.setAttribute('style', 'font-size: 10px; opacity: 0.8; transform: translateX(5px)');
-                barSubLabel.textContent = label;
-                barGroup.appendChild(barSubLabel);
-              }
-            }
-            
-            trackGroup.appendChild(barGroup);
-          } else if (item.type === 'point') {
-            const pointGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            pointGroup.setAttribute('class', 'timeline-point');
-            
-            const pointX = dateToX(new Date(item.date));
-            const pointY = rowY + 5;
-            
-            // Add point shape
-            let shapeElement;
-            switch (item.shape) {
-              case 'circle':
-                shapeElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                shapeElement.setAttribute('cx', pointX.toString());
-                shapeElement.setAttribute('cy', (pointY + 5).toString());
-                shapeElement.setAttribute('r', '5');
-                break;
-              case 'square':
-                shapeElement = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                shapeElement.setAttribute('x', (pointX - 5).toString());
-                shapeElement.setAttribute('y', pointY.toString());
-                shapeElement.setAttribute('width', '10');
-                shapeElement.setAttribute('height', '10');
-                break;
-              case 'triangle-down':
-                shapeElement = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-                shapeElement.setAttribute('points', `${pointX},${pointY + 10} ${pointX - 6},${pointY} ${pointX + 6},${pointY}`);
-                break;
-              default: // triangle
-                shapeElement = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-                shapeElement.setAttribute('points', `${pointX},${pointY} ${pointX - 6},${pointY + 10} ${pointX + 6},${pointY + 10}`);
-            }
-            shapeElement.setAttribute('class', `timeline-point-shape color-${item.color}`);
-            pointGroup.appendChild(shapeElement);
-            
-            // Add point label with proper anchoring
-            const pointLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            let labelX = pointX;
-            let textAnchor = 'middle';
-            let dominantBaseline = 'text-after-edge';
-            let transform = '';
-            
-            switch (item.textAnchor) {
-              case 'left':
-                labelX = pointX;
-                textAnchor = 'end';
-                dominantBaseline = 'middle';
-                transform = 'translateX(-10px)';
-                break;
-              case 'right':
-                labelX = pointX;
-                textAnchor = 'start';
-                dominantBaseline = 'middle';
-                transform = 'translateX(10px)';
-                break;
-              case 'top':
-                labelX = pointX;
-                textAnchor = 'middle';
-                dominantBaseline = 'text-after-edge';
-                transform = 'translateY(-15px)';
-                break;
-              case 'bottom':
-                labelX = pointX;
-                textAnchor = 'middle';
-                dominantBaseline = 'text-before-edge';
-                transform = 'translateY(15px)';
-                break;
-              default: // center
-                labelX = pointX;
-                textAnchor = 'middle';
-                dominantBaseline = 'text-after-edge';
-                transform = 'translateY(-2px)';
-            }
-            
-            pointLabel.setAttribute('x', labelX.toString());
-            pointLabel.setAttribute('y', rowY.toString());
-            pointLabel.setAttribute('class', 'timeline-point-label');
-            pointLabel.setAttribute('text-anchor', textAnchor);
-            pointLabel.setAttribute('dominant-baseline', dominantBaseline);
-            pointLabel.setAttribute('style', `transform: ${transform}`);
-            pointLabel.textContent = item.name;
-            
-            // Add point label if present
-            if (item.label) {
-              const label = processLabel(item.label, item);
-              if (label) {
-                const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-                tspan.setAttribute('dx', '8');
-                tspan.setAttribute('style', 'font-size: 10px; opacity: 0.8; font-weight: normal');
-                tspan.textContent = label;
-                pointLabel.appendChild(tspan);
-              }
-            }
-            
-            pointGroup.appendChild(pointLabel);
-            
-            trackGroup.appendChild(pointGroup);
-          }
-        });
-      });
-      
-      contentGroup.appendChild(trackGroup);
-      yOffset += trackTotalHeight;
-    });
-    
-    // Add milestones
-    if (data.milestones) {
-      data.milestones.forEach((milestone, index) => {
-        const milestoneGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        milestoneGroup.setAttribute('class', 'timeline-milestone');
-        
-        const x = dateToX(new Date(milestone.date));
-        
-        // Add milestone line
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', x.toString());
-        line.setAttribute('y1', topMargin.toString());
-        line.setAttribute('x2', x.toString());
-        line.setAttribute('y2', totalHeight.toString());
-        line.setAttribute('class', `timeline-milestone-line color-${milestone.color}`);
-        milestoneGroup.appendChild(line);
-        
-        // Add milestone marker
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        marker.setAttribute('cx', x.toString());
-        marker.setAttribute('cy', topMargin.toString());
-        marker.setAttribute('r', '4');
-        marker.setAttribute('class', `timeline-milestone-marker color-${milestone.color}`);
-        milestoneGroup.appendChild(marker);
-        
-        // Add milestone label
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        label.setAttribute('x', x.toString());
-        label.setAttribute('y', (topMargin - 10).toString());
-        label.setAttribute('class', 'timeline-milestone-label');
-        label.setAttribute('text-anchor', 'middle');
-        label.textContent = milestone.name;
-        milestoneGroup.appendChild(label);
-        
-        contentGroup.appendChild(milestoneGroup);
-      });
-    }
-    
-    // Add today indicator if applicable
-    const today = new Date();
-    if (today >= minDate && today <= maxDate) {
-      const todayGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      todayGroup.setAttribute('class', 'timeline-today');
-      
-      const x = dateToX(today);
-      const labelY = topMargin - 35;
-      
-      // Add today line
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', x.toString());
-      line.setAttribute('y1', (labelY + 20).toString());
-      line.setAttribute('x2', x.toString());
-      line.setAttribute('y2', totalHeight.toString());
-      line.setAttribute('class', 'timeline-today-line');
-      todayGroup.appendChild(line);
-      
-      // Add stippled line
-      const stipple = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      stipple.setAttribute('x1', x.toString());
-      stipple.setAttribute('y1', (labelY + 20).toString());
-      stipple.setAttribute('x2', x.toString());
-      stipple.setAttribute('y2', totalHeight.toString());
-      stipple.setAttribute('class', 'timeline-today-stipple');
-      todayGroup.appendChild(stipple);
-      
-      // Add today label background
-      const labelBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      labelBg.setAttribute('x', (x - 30).toString());
-      labelBg.setAttribute('y', labelY.toString());
-      labelBg.setAttribute('width', '60');
-      labelBg.setAttribute('height', '20');
-      labelBg.setAttribute('class', 'timeline-today-bg');
-      todayGroup.appendChild(labelBg);
-      
-      // Add today label
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', x.toString());
-      label.setAttribute('y', (labelY + 15).toString());
-      label.setAttribute('class', 'timeline-today-label');
-      label.setAttribute('text-anchor', 'middle');
-      label.textContent = 'Today';
-      todayGroup.appendChild(label);
-      
-      contentGroup.appendChild(todayGroup);
-    }
-    
-    newSvg.appendChild(contentGroup);
-    
-    // Convert SVG to PNG
-    const svgData = new XMLSerializer().serializeToString(newSvg);
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const svgUrl = URL.createObjectURL(svgBlob);
-    
-    // Create an image element to load the SVG
+  // Rasterize at 2x so PNGs stay crisp on slides and hi-dpi screens.
+  const PNG_SCALE = 2;
+  const renderPNG = (onBlob: (blob: Blob) => void) => {
+    const built = buildExportSvg();
+    if (!built) return;
+    // Bump the intrinsic size so the browser rasterizes the SVG at 2x
+    built.svg.setAttribute('width', (built.width * PNG_SCALE).toString());
+    built.svg.setAttribute('height', (built.height * PNG_SCALE).toString());
+    const url = URL.createObjectURL(svgToBlob(built.svg));
     const img = new Image();
     img.onload = () => {
-      // Create a canvas with the same dimensions as the SVG
       const canvas = document.createElement('canvas');
-      canvas.width = downloadWidth;
-      canvas.height = downloadHeight;
-      
-      // Draw the SVG onto the canvas
+      canvas.width = built.width * PNG_SCALE;
+      canvas.height = built.height * PNG_SCALE;
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(img, 0, 0);
-        
-        // Convert canvas to PNG
-        const pngUrl = canvas.toDataURL('image/png');
-        
-        // Create a download link
-        const downloadLink = document.createElement('a');
-        downloadLink.href = pngUrl;
-        downloadLink.download = 'timeline.png';
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
+        canvas.toBlob(blob => { if (blob) onBlob(blob); }, 'image/png');
       }
-      
-      // Clean up
-      URL.revokeObjectURL(svgUrl);
+      URL.revokeObjectURL(url);
     };
-    
-    img.src = svgUrl;
+    img.src = url;
   };
 
-  const copyPNG = async () => {
-    const { blob: svgBlob, width, height } = await buildExportSvgBlob();
-    const svgUrl = URL.createObjectURL(svgBlob);
-    const img = new Image();
-    img.onload = async () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.drawImage(img, 0, 0);
-      URL.revokeObjectURL(svgUrl);
-      canvas.toBlob(async (pngBlob) => {
-        if (!pngBlob) return;
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
-          setCopyState('copied');
-          setTimeout(() => setCopyState('idle'), 2000);
-        } catch {
-          // Fallback: download instead
-          const url = URL.createObjectURL(pngBlob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'timeline.png';
-          a.click();
-          URL.revokeObjectURL(url);
-        }
-      }, 'image/png');
-    };
-    img.src = svgUrl;
-  };
+  const exportPNG = () => renderPNG(blob => downloadBlob(blob, 'timeline.png'));
+
+  const copyPNG = () => renderPNG(async (pngBlob) => {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+      setCopyState('copied');
+      setTimeout(() => setCopyState('idle'), 2000);
+    } catch {
+      // Clipboard unavailable — download instead
+      downloadBlob(pngBlob, 'timeline.png');
+    }
+  });
 
   if (!data || !data.tracks || data.tracks.length === 0) {
     return (
@@ -1104,7 +213,7 @@ ${svgData}`;
   // Generate month ticks for the timeline header
   const getMonthTicks = () => {
     const months: { date: Date; x: number }[] = [];
-    let currentDate = new Date(minDate);
+    const currentDate = new Date(minDate);
     currentDate.setDate(1);
     if (currentDate.getTime() < minDate.getTime()) {
       currentDate.setMonth(currentDate.getMonth() + 1);
@@ -1122,7 +231,7 @@ ${svgData}`;
   // Generate day ticks for the timeline header
   const getDayTicks = () => {
     const days: { date: Date; x: number }[] = [];
-    let currentDate = new Date(minDate);
+    const currentDate = new Date(minDate);
     currentDate.setHours(0, 0, 0, 0);
     while (currentDate <= maxDate) {
       days.push({
@@ -1137,7 +246,7 @@ ${svgData}`;
   // Generate week ticks for the timeline header
   const getWeekTicks = () => {
     const weeks: { date: Date; x: number; weekNumber: number }[] = [];
-    let currentDate = new Date(minDate);
+    const currentDate = new Date(minDate);
     
     // Move to the start of the week (Monday)
     const day = currentDate.getDay();
@@ -1167,6 +276,15 @@ ${svgData}`;
   const monthTicks = getMonthTicks();
   const dayTicks = getDayTicks();
   const weekTicks = getWeekTicks();
+
+  // Adaptive tick density: on long ranges per-day labels smear into noise, so
+  // drop day numbers below ~15px/day and thin the grid to weeks, then months.
+  const totalRangeDays = (maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24);
+  const pxPerDay = totalRangeDays > 0 ? (dimensions.width - leftMargin - 20) / totalRangeDays : 0;
+  const showDayDetail = pxPerDay >= 15;
+  const gridTicks = showDayDetail ? dayTicks : pxPerDay * 7 >= 18 ? weekTicks : monthTicks;
+  // Thin week-number labels to keep ~30px between them (every 2nd, 4th, … week)
+  const weekStep = Math.max(1, Math.ceil(30 / Math.max(pxPerDay * 7, 1)));
 
   const renderTracks = () => {
     let yOffset = topMargin;
@@ -1254,14 +372,16 @@ ${svgData}`;
         return (
           <polygon
             points={`${cx},${cy - r} ${cx - r},${cy + r} ${cx + r},${cy + r}`}
-            className={`timeline-point-shape color-${color}`}
+            className={colorClass('timeline-point-shape', color)}
+            {...colorAttrs(color)}
           />
         );
       case 'triangle-down':
         return (
           <polygon
             points={`${cx},${cy + r} ${cx - r},${cy - r} ${cx + r},${cy - r}`}
-            className={`timeline-point-shape color-${color}`}
+            className={colorClass('timeline-point-shape', color)}
+            {...colorAttrs(color)}
           />
         );
       case 'circle':
@@ -1270,7 +390,8 @@ ${svgData}`;
             cx={cx}
             cy={cy}
             r={r}
-            className={`timeline-point-shape color-${color}`}
+            className={colorClass('timeline-point-shape', color)}
+            {...colorAttrs(color)}
           />
         );
       case 'square':
@@ -1280,7 +401,8 @@ ${svgData}`;
             y={cy - r}
             width={r * 2}
             height={r * 2}
-            className={`timeline-point-shape color-${color}`}
+            className={colorClass('timeline-point-shape', color)}
+            {...colorAttrs(color)}
           />
         );
       default:
@@ -1317,7 +439,8 @@ ${svgData}`;
                       y={rowY + 5}
                       width={dateToX(new Date(item.endDate)) - dateToX(new Date(item.startDate))}
                       height={rowHeight - 10}
-                      className={`timeline-bar-rect color-${item.color}`}
+                      className={colorClass('timeline-bar-rect', item.color)}
+                      {...colorAttrs(item.color)}
                       rx="3"
                       ry="3"
                     />
@@ -1372,8 +495,8 @@ ${svgData}`;
 
                   let labelX = px;
                   let labelY = cy - SHAPE_R - 7;  // default: above the shape
-                  let textAnchor = 'middle';
-                  let dominantBaseline = 'auto';
+                  let textAnchor: React.CSSProperties['textAnchor'] = 'middle';
+                  let dominantBaseline: React.CSSProperties['dominantBaseline'] = 'auto';
 
                   if (anchor === 'left') {
                     labelX = px - sideGap;
@@ -1457,14 +580,19 @@ ${svgData}`;
       return group.map((milestone, index) => {
         const x = dateToX(new Date(milestone.date));
         const verticalOffset = index * 25; // 25px vertical spacing between labels in the same group
-        
+
+        // Size the label background to the text and keep it inside the canvas
+        const bgWidth = milestone.name.length * 7.5 + 16;
+        const halfBg = bgWidth / 2;
+        const labelX = Math.min(Math.max(x, halfBg), Math.max(dimensions.width - halfBg, halfBg));
+
         return (
           <g key={`milestone-${groupIndex}-${index}`} className="timeline-milestone">
             {/* Background for milestone label */}
             <rect
-              x={x - 50}
+              x={labelX - halfBg}
               y={topMargin - 45 - verticalOffset}
-              width="100"
+              width={bgWidth}
               height="20"
               className="timeline-milestone-bg"
             />
@@ -1475,7 +603,8 @@ ${svgData}`;
               y1={topMargin - 15}
               x2={x}
               y2={totalHeight}
-              className={`timeline-milestone-line color-${milestone.color}`}
+              className={colorClass('timeline-milestone-line', milestone.color)}
+              {...colorAttrs(milestone.color)}
             />
             
             {/* Milestone marker */}
@@ -1483,12 +612,13 @@ ${svgData}`;
               cx={x}
               cy={topMargin - 15}
               r="4"
-              className={`timeline-milestone-marker color-${milestone.color}`}
+              className={colorClass('timeline-milestone-marker', milestone.color)}
+              {...colorAttrs(milestone.color)}
             />
             
             {/* Milestone label */}
             <text
-              x={x}
+              x={labelX}
               y={topMargin - 30 - verticalOffset}
               className="timeline-milestone-label"
               textAnchor="middle"
@@ -1549,9 +679,10 @@ ${svgData}`;
     
     return label.replace(/%(\w+)/g, (match, token) => {
       switch (token) {
-        case 'date':
+        case 'date': {
           const date = new Date(item.type === 'bar' ? item.startDate : item.date);
           return `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })}`;
+        }
         case 'duration':
           if (item.type === 'bar') {
             const start = new Date(item.startDate);
@@ -1564,106 +695,6 @@ ${svgData}`;
           return match;
       }
     });
-  };
-
-  const renderTimelineItem = (item: TimelineItem, rowIndex: number, itemIndex: number) => {
-    const x = dateToX(new Date(item.type === 'bar' ? item.startDate : item.date));
-    const color = item.color || 'blue';
-    const textAnchor = item.textAnchor || 'center';
-    const label = processLabel(item.label, item);
-
-    if (item.type === 'bar') {
-      const endX = dateToX(new Date(item.endDate));
-      const width = endX - x;
-      const y = rowIndex * rowHeight + rowHeight / 2;
-
-      return (
-        <g key={`${rowIndex}-${itemIndex}`}>
-          <rect
-            x={x}
-            y={y - rowHeight / 2}
-            width={width}
-            height={rowHeight}
-            fill={color}
-            rx={4}
-          />
-          <text
-            x={x + width / 2}
-            y={y}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="white"
-            fontSize={12}
-            fontWeight="bold"
-          >
-            {item.name}
-          </text>
-          {label && (
-            <text
-              x={x + width / 2}
-              y={y + 16}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="white"
-              fontSize={10}
-              opacity={0.8}
-            >
-              {label}
-            </text>
-          )}
-        </g>
-      );
-    } else {
-      const y = rowIndex * rowHeight + rowHeight / 2;
-      const shape = item.shape || 'triangle';
-      let shapeElement;
-
-      switch (shape) {
-        case 'circle':
-          shapeElement = <circle cx={x} cy={y} r={6} fill={color} />;
-          break;
-        case 'square':
-          shapeElement = <rect x={x - 6} y={y - 6} width={12} height={12} fill={color} />;
-          break;
-        default:
-          shapeElement = (
-            <path
-              d={`M ${x} ${y - 6} L ${x - 6} ${y + 6} L ${x + 6} ${y + 6} Z`}
-              fill={color}
-            />
-          );
-      }
-
-      return (
-        <g key={`${rowIndex}-${itemIndex}`}>
-          {shapeElement}
-          <text
-            x={x}
-            y={y - 12}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="white"
-            fontSize={12}
-            fontWeight="bold"
-          >
-            {item.name}
-          </text>
-          {label && (
-            <text
-              x={x}
-              y={y + 16}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="white"
-              fontSize={10}
-              opacity={0.8}
-            >
-              {label}
-            </text>
-          )}
-        </g>
-      );
-    }
   };
 
   const slideOverlay = (() => {
@@ -1706,6 +737,12 @@ ${svgData}`;
             >
               Dates
             </button>
+            <button
+              className={`timeline-pill-btn ${showToday ? 'active' : ''}`}
+              onClick={() => setShowToday(v => !v)}
+            >
+              Today
+            </button>
           </div>
           <div className="timeline-ratio-group">
             {(['free', '16:9', '4:3'] as const).map(r => (
@@ -1738,8 +775,9 @@ ${svgData}`;
           width={dimensions.width}
           height={totalHeight}
         >
+          <style>{colorStyles()}</style>
           <g className="timeline-header-dates">
-            {showWeekNumbers && weekTicks.map((tick, index) => (
+            {showWeekNumbers && weekTicks.filter((_, index) => index % weekStep === 0).map((tick, index) => (
               <g key={`week-${index}`} className="timeline-week-tick">
                 <line
                   x1={tick.x}
@@ -1781,7 +819,7 @@ ${svgData}`;
               </g>
             ))}
             
-            {showDates && dayTicks.map((tick, index) => (
+            {showDates && showDayDetail && dayTicks.map((tick, index) => (
               <g key={`day-${index}`} className="timeline-day-tick">
                 <line
                   x1={tick.x}
@@ -1799,21 +837,24 @@ ${svgData}`;
                 >
                   {tick.date.getDate()}
                 </text>
-                
-                <line
-                  x1={tick.x}
-                  y1={topMargin}
-                  x2={tick.x}
-                  y2={totalHeight}
-                  className="timeline-grid-line"
-                />
               </g>
+            ))}
+
+            {showDates && gridTicks.map((tick, index) => (
+              <line
+                key={`grid-${index}`}
+                x1={tick.x}
+                y1={topMargin}
+                x2={tick.x}
+                y2={totalHeight}
+                className="timeline-grid-line"
+              />
             ))}
           </g>
           
           {renderTracks()}
           {renderMilestones()}
-          {renderTodayIndicator()}
+          {showToday && renderTodayIndicator()}
           {slideOverlay}
         </svg>
       </div>

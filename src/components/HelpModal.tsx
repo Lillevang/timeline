@@ -96,6 +96,22 @@ recurring point "Name" monthly from YYYY-MM-DD to YYYY-MM-DD shape square color 
               <code>pink</code> · <code>cyan</code> · <code>teal</code> · <code>indigo</code> ·{' '}
               <code>violet</code> · <code>lime</code> · <code>gray</code>
             </p>
+            <p>
+              Any element that takes <code>color</code> also accepts a hex value for custom
+              (e.g. brand) colors: <code>bar "API" from 2025-01-01 to 2025-02-01 color #1c7ed6</code>.
+              Both <code>#rgb</code> and <code>#rrggbb</code> forms work.
+            </p>
+          </section>
+
+          <section>
+            <h3>Sharing</h3>
+            <p>
+              Your timeline lives entirely in the URL (the <code>#d=…</code> fragment), so
+              copying the address bar is already a share. The <strong>Share</strong> button
+              additionally mints a stable short link (<code>s.lvang.dev/…</code>) and copies it
+              to your clipboard. Sharing again from the same browser <em>updates</em> the same
+              short link, so a link you've sent around always shows the latest version.
+            </p>
           </section>
 
           <section>
