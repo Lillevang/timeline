@@ -41,7 +41,7 @@ tasks:
       - |
         echo "🚀 Starting container {{.IMAGE}}:{{.TAG}}"
         NETWORK_OPT=$([ "{{.RUNTIME}}" = "podman" ] && echo "--network=slirp4netns" || echo "")
-        CID=$({{.RUNTIME}} run -d $NETWORK_OPT -p 8081:80 {{.IMAGE}}:{{.TAG}})
+        CID=$({{.RUNTIME}} run -d $NETWORK_OPT -p 8081:8080 {{.IMAGE}}:{{.TAG}})
         echo "⌛ Waiting for container to be ready"
         sleep 3
         if [ "$(curl --max-time 5 -fs http://localhost:8081/healthz)" = "ok" ]; then
@@ -71,17 +71,31 @@ tasks:
     internal: true
     cmds:
       - |
-        crane digest {{.IMAGE}}:{{.TAG}} > .digest
+        # skopeo shares podman's credential store (containers/auth.json),
+        # unlike crane which reads ~/.docker/config.json
+        skopeo inspect --no-tags docker://{{.IMAGE}}:{{.TAG}} | jq -r .Digest > .digest
 
   sign:
-    desc: Sign the image with cosign
-    dotenv: ['.cosign.env']
+    desc: Sign the pushed image digest with cosign (key injected from 1Password, never on disk)
+    vars:
+      OP_ITEM: '{{.OP_ITEM | default "op://Personal/cosign"}}'
     cmds:
       - task: resolve-digest
       - |
         DIGEST=$(cat .digest)
         echo "🔏 Signing image {{.IMAGE}}@$DIGEST"
-        cosign sign --yes --key ~/.config/cosign/cosign.key {{.IMAGE}}@$DIGEST
+        # cosign only reads docker-style config, and ~/.docker/config.json on
+        # this machine keeps getting clobbered with a scope-less token — hand
+        # cosign podman's working GHCR creds via a throwaway DOCKER_CONFIG
+        AUTH_JSON="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/containers/auth.json"
+        export DOCKER_CONFIG=$(mktemp -d)
+        cp "$AUTH_JSON" "$DOCKER_CONFIG/config.json"
+        COSIGN_PRIVATE_KEY=$(op read "{{.OP_ITEM}}/private-key") \
+        COSIGN_PASSWORD=$(op read "{{.OP_ITEM}}/password") \
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY {{.IMAGE}}@$DIGEST
+        RC=$?
+        rm -rf "$DOCKER_CONFIG"
+        exit $RC
 
   trivy:
     desc: Generate SBOM and vulnerability report with Trivy
@@ -102,11 +116,11 @@ tasks:
         git push
 
   release:
-    desc: Full release pipeline (build, push, scan, commit). Run 'task sign' separately if cosign is available.
+    desc: Full release pipeline (build, push, sign, scan, commit)
     cmds:
       - task: verify
       - task: push
-      - task: resolve-digest
+      - task: sign
       - task: trivy
       - task: commit-artifacts
       - echo ""
