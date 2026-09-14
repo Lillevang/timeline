@@ -30,3 +30,6 @@ dist-ssr
 # Deployment
 nginx.conf
 k8s/*
+
+# Renovate dry-run log (task deps:check)
+.renovate-check.jsonl
