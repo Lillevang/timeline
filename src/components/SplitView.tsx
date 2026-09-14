@@ -13,47 +13,44 @@ const SplitView: React.FC<SplitViewProps> = ({
   initialLeftWidth = 40 
 }) => {
   const [leftWidth, setLeftWidth] = useState(initialLeftWidth);
+  const [resizing, setResizing] = useState(false);
   const splitViewRef = useRef<HTMLDivElement>(null);
-  const resizingRef = useRef(false);
   const startXRef = useRef(0);
   const startLeftWidthRef = useRef(0);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
-    resizingRef.current = true;
     startXRef.current = e.clientX;
     startLeftWidthRef.current = leftWidth;
+    setResizing(true);
+  };
+
+  // While a drag is in progress, track the pointer on the document so the
+  // divider keeps following it even when the cursor leaves the handle.
+  useEffect(() => {
+    if (!resizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!splitViewRef.current) return;
+      const splitViewWidth = splitViewRef.current.offsetWidth;
+      const deltaX = e.clientX - startXRef.current;
+      const newLeftWidth = Math.min(
+        Math.max(20, startLeftWidthRef.current + (deltaX / splitViewWidth) * 100),
+        80
+      );
+      setLeftWidth(newLeftWidth);
+    };
+    const handleMouseUp = () => setResizing(false);
+
     document.body.style.cursor = 'col-resize';
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!resizingRef.current || !splitViewRef.current) return;
-    
-    const splitViewWidth = splitViewRef.current.offsetWidth;
-    const deltaX = e.clientX - startXRef.current;
-    const newLeftWidth = Math.min(
-      Math.max(20, startLeftWidthRef.current + (deltaX / splitViewWidth) * 100),
-      80
-    );
-    
-    setLeftWidth(newLeftWidth);
-  };
-
-  const handleMouseUp = () => {
-    resizingRef.current = false;
-    document.body.style.cursor = '';
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  };
-
-  useEffect(() => {
     return () => {
+      document.body.style.cursor = '';
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [resizing]);
 
   return (
     <div className="split-view" ref={splitViewRef}>

@@ -14,8 +14,8 @@ interface EditorProps {
 const TimelineEditor: React.FC<EditorProps> = ({ value, onChange, errors = [] }) => {
   const editorRef = useRef<CodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
+  // Latest errors, readable from the (async) onMount callback below.
   const errorsRef = useRef<ParseError[]>(errors);
-  errorsRef.current = errors;
 
   const handleEditorChange = (value: string | undefined) => {
     if (value !== undefined) {
@@ -41,6 +41,7 @@ const TimelineEditor: React.FC<EditorProps> = ({ value, onChange, errors = [] })
   };
 
   useEffect(() => {
+    errorsRef.current = errors;
     if (monacoRef.current && editorRef.current) {
       applyMarkers(monacoRef.current, editorRef.current, errors);
     }
