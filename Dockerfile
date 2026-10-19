@@ -5,7 +5,7 @@ COPY . .
 RUN npm ci && npm run build
 
 # Stage 2: Serve with Nginx (unprivileged variant: runs as uid 101, listens on 8080)
-FROM docker.io/nginxinc/nginx-unprivileged:1.31.5-alpine-slim@sha256:736aa11ab9f9c320825722e411661c64559881e15e77f37137eef168ebe9515c
+FROM docker.io/nginxinc/nginx-unprivileged:1.31.7-alpine-slim@sha256:a8cb0f33d51fa107c96fd2bd3a71aaf564ec131e9d2bdf8700944f0ed8b170d7
 USER root
 RUN apk upgrade --no-cache
 USER 101
